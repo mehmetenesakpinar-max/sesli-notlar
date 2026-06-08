@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sesli Notlar</title>
+  <meta name="theme-color" content="#c4452d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sesli Notlar">
+  <meta name="application-name" content="Sesli Notlar">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spline+Sans+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #efe6d8;
+    --paper: #f7f1e6;
+    --ink: #2a1f17;
+    --ink-soft: #6b5a4a;
+    --accent: #c4452d;
+    --accent-deep: #9c3320;
+    --amber: #d98a3d;
+    --line: #d8cbb6;
+    --shadow: rgba(42, 31, 23, 0.14);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Newsreader', Georgia, serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(217,138,61,0.10), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(196,69,45,0.08), transparent 45%);
+    color: var(--ink);
+    min-height: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 999;
+    opacity: 0.04; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 44px 20px 120px; }
+
+  header { text-align: center; margin-bottom: 32px; }
+  .kicker {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif; font-weight: 900; font-size: clamp(38px, 9vw, 64px);
+    line-height: 0.95; letter-spacing: -0.02em;
+  }
+  h1 em { font-style: italic; font-weight: 500; color: var(--accent); }
+  .tag { font-style: italic; color: var(--ink-soft); margin-top: 10px; font-size: 17px; }
+
+  .recorder {
+    background: var(--paper); border: 1.5px solid var(--line); border-radius: 20px;
+    padding: 26px 22px 24px; box-shadow: 0 18px 40px -22px var(--shadow);
+    position: relative; margin-bottom: 34px;
+  }
+  .recorder::after {
+    content: "REC ●"; position: absolute; top: 16px; right: 20px;
+    font-family: 'Spline Sans Mono', monospace; font-size: 10px;
+    letter-spacing: 0.2em; color: var(--line);
+  }
+  .timer {
+    font-family: 'Spline Sans Mono', monospace; font-size: 44px; font-weight: 500;
+    text-align: center; letter-spacing: 0.02em; color: var(--ink); transition: color .3s;
+  }
+  .timer.live { color: var(--accent); }
+  .timer .ms { font-size: 21px; opacity: 0.45; }
+
+  canvas#wave { width: 100%; height: 64px; display: block; margin: 4px 0 14px; }
+
+  .controls { display: flex; align-items: center; justify-content: center; gap: 18px; }
+  .rec-btn {
+    width: 76px; height: 76px; border-radius: 50%; border: none; cursor: pointer;
+    background: var(--accent); position: relative; flex: none;
+    box-shadow: 0 0 0 6px rgba(196,69,45,0.16), 0 10px 22px -8px var(--accent-deep);
+    transition: transform .15s, box-shadow .25s, border-radius .25s;
+  }
+  .rec-btn:hover { transform: scale(1.05); }
+  .rec-btn:active { transform: scale(0.96); }
+  .rec-btn .dot {
+    position: absolute; inset: 0; margin: auto; width: 28px; height: 28px;
+    border-radius: 50%; background: var(--paper); transition: all .25s;
+  }
+  .rec-btn.recording { animation: pulse 1.4s infinite; border-radius: 24px; }
+  .rec-btn.recording .dot { border-radius: 6px; width: 24px; height: 24px; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 6px rgba(196,69,45,0.18), 0 10px 22px -8px var(--accent-deep); }
+    50% { box-shadow: 0 0 0 14px rgba(196,69,45,0.05), 0 10px 22px -8px var(--accent-deep); }
+  }
+  .hint {
+    text-align: center; margin-top: 14px; color: var(--ink-soft);
+    font-size: 15px; font-style: italic; min-height: 22px;
+  }
+
+  /* canlı transkript */
+  .live-box {
+    display: none; margin-top: 16px; background: #fffdf8; border: 1.5px solid var(--line);
+    border-radius: 12px; padding: 14px 16px; max-height: 180px; overflow-y: auto;
+    font-size: 16px; line-height: 1.5; color: var(--ink); animation: rise .3s ease both;
+  }
+  .live-box.show { display: block; }
+  .live-box .interim { color: var(--amber); font-style: italic; }
+  .live-box .label {
+    font-family:'Spline Sans Mono',monospace; font-size:10px; letter-spacing:0.18em;
+    text-transform:uppercase; color: var(--accent); display:block; margin-bottom:8px;
+  }
+
+  .save-form { margin-top: 20px; display: none; animation: rise .35s ease both; }
+  .save-form.show { display: block; }
+  @keyframes rise { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform:none;} }
+  .field-label {
+    font-family:'Spline Sans Mono',monospace; font-size:10px; letter-spacing:0.18em;
+    text-transform:uppercase; color: var(--ink-soft); display:block; margin:14px 0 6px;
+  }
+  .save-form input, .save-form textarea {
+    width: 100%; font-family: 'Newsreader', serif; font-size: 16px;
+    background: #fffdf8; border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 12px 14px; color: var(--ink); resize: vertical; line-height: 1.5;
+  }
+  .save-form input:focus, .save-form textarea:focus { outline: none; border-color: var(--amber); }
+  .save-form input::placeholder, .save-form textarea::placeholder { color: #b3a48f; font-style: italic; }
+  .preview-audio { width: 100%; margin: 4px 0 0; border-radius: 10px; }
+  .summary-box {
+    background: linear-gradient(180deg,#fbf3e3,#f7eedd); border: 1.5px solid var(--amber);
+    border-radius: 12px; padding: 14px 16px; font-size: 16px; line-height: 1.55;
+    color: var(--ink); font-style: italic;
+  }
+  .form-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .btn {
+    font-family: 'Spline Sans Mono', monospace; font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 13px 18px; border-radius: 10px; cursor: pointer;
+    border: 1.5px solid var(--ink); background: var(--ink); color: var(--paper);
+    transition: transform .12s; flex: 1;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.ghost { background: transparent; color: var(--ink); }
+
+  .list-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 16px; gap: 14px; flex-wrap: wrap;
+  }
+  .list-head h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 24px; }
+  .search {
+    font-family: 'Spline Sans Mono', monospace; font-size: 13px;
+    background: transparent; border: none; border-bottom: 1.5px solid var(--line);
+    padding: 6px 4px; color: var(--ink); min-width: 150px;
+  }
+  .search:focus { outline: none; border-color: var(--accent); }
+
+  .note {
+    background: var(--paper); border: 1.5px solid var(--line); border-radius: 16px;
+    padding: 18px 20px; margin-bottom: 14px; position: relative;
+    box-shadow: 0 10px 26px -20px var(--shadow); animation: rise .3s ease both;
+  }
+  .note-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .note-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; line-height: 1.2; }
+  .note-date {
+    font-family: 'Spline Sans Mono', monospace; font-size: 10.5px;
+    letter-spacing: 0.08em; color: var(--ink-soft); white-space: nowrap; padding-top: 4px;
+  }
+  .note .sum {
+    background: #fbf3e3; border-left: 3px solid var(--amber); border-radius: 6px;
+    padding: 10px 12px; margin: 12px 0; font-style: italic; color: var(--ink); font-size: 15.5px; line-height:1.5;
+  }
+  .note audio { width: 100%; height: 40px; border-radius: 8px; margin-top: 4px; }
+  .note .transcript {
+    margin-top: 10px; color: var(--ink-soft); font-size: 15px; line-height: 1.55;
+    max-height: 0; overflow: hidden; transition: max-height .35s ease; white-space: pre-wrap;
+  }
+  .note .transcript.open { max-height: 600px; }
+  .note-foot { display: flex; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+  .link-btn {
+    background: none; border: none; cursor: pointer; padding: 0;
+    font-family: 'Spline Sans Mono', monospace; font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid transparent; transition: color .2s, border-color .2s;
+  }
+  .link-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  .empty {
+    text-align: center; padding: 50px 20px; color: var(--ink-soft);
+    border: 1.5px dashed var(--line); border-radius: 16px; font-style: italic;
+  }
+  .empty .big { font-size: 40px; margin-bottom: 8px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--paper); padding: 12px 22px; border-radius: 30px;
+    font-family: 'Spline Sans Mono', monospace; font-size: 12px; letter-spacing: 0.08em;
+    opacity: 0; pointer-events: none; transition: all .3s; z-index: 1000; max-width: 90%; text-align:center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .warn {
+    background: #fbe9df; border: 1.5px solid var(--accent); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 24px; font-size: 14.5px; color: var(--accent-deep); display:none;
+  }
+  .warn.show { display: block; }
+
+  footer { text-align: center; margin-top: 40px; color: var(--ink-soft); font-size: 13px; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Diktafon · Defter · Özet</div>
+    <h1>Sesli <em>Notlar</em></h1>
+    <p class="tag">Konuş — yazıya dönüşsün, özeti çıksın.</p>
+  </header>
+
+  <div class="warn" id="warn"></div>
+
+  <section class="recorder">
+    <div class="timer" id="timer">00:00<span class="ms">.0</span></div>
+    <canvas id="wave"></canvas>
+    <div class="controls">
+      <button class="rec-btn" id="recBtn" aria-label="Kaydet"><span class="dot"></span></button>
+    </div>
+    <div class="hint" id="hint">Kaydı başlatmak için kırmızı düğmeye dokun</div>
+
+    <div class="live-box" id="liveBox">
+      <span class="label">Canlı metin</span>
+      <span id="liveFinal"></span><span class="interim" id="liveInterim"></span>
+    </div>
+
+    <div class="save-form" id="saveForm">
+      <span class="field-label">Kayıt</span>
+      <audio class="preview-audio" id="previewAudio" controls></audio>
+
+      <span class="field-label">Özet</span>
+      <div class="summary-box" id="summaryBox">—</div>
+
+      <span class="field-label">Metin (düzenleyebilirsin)</span>
+      <textarea id="transcriptInput" rows="4" placeholder="Konuşma buraya yazıya çevrildi..."></textarea>
+
+      <span class="field-label">Başlık (isteğe bağlı)</span>
+      <input type="text" id="titleInput" placeholder="Başlık" maxlength="80">
+
+      <div class="form-actions">
+        <button class="btn ghost" id="discardBtn">Sil</button>
+        <button class="btn" id="saveBtn">Kaydet</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="list-head">
+    <h2 id="count">Notların</h2>
+    <input type="text" class="search" id="search" placeholder="ara...">
+  </div>
+  <div id="notes"></div>
+
+  <footer>Notların yalnızca bu cihazda, tarayıcının hafızasında saklanır.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- depolama ---------- */
+  var memStore = null;
+  function loadNotes() {
+    try { var r = localStorage.getItem("sesli_notlar"); return r ? JSON.parse(r) : []; }
+    catch (e) { return memStore || []; }
+  }
+  function saveNotes(n) {
+    memStore = n;
+    try { localStorage.setItem("sesli_notlar", JSON.stringify(n)); } catch (e) {}
+  }
+  var notes = loadNotes();
+
+  /* ---------- DOM ---------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var recBtn=$("recBtn"), timerEl=$("timer"), hint=$("hint"), canvas=$("wave"),
+      ctx=canvas.getContext("2d"), liveBox=$("liveBox"), liveFinal=$("liveFinal"),
+      liveInterim=$("liveInterim"), saveForm=$("saveForm"), previewAudio=$("previewAudio"),
+      summaryBox=$("summaryBox"), transcriptInput=$("transcriptInput"), titleInput=$("titleInput"),
+      saveBtn=$("saveBtn"), discardBtn=$("discardBtn"), notesEl=$("notes"),
+      countEl=$("count"), searchEl=$("search"), toastEl=$("toast"), warn=$("warn");
+
+  var mediaRecorder=null, chunks=[], stream=null;
+  var audioCtx=null, analyser=null, rafId=null, dataArr=null;
+  var startTime=0, timerId=null, pendingBlob=null, recording=false;
+  var recog=null, finalText="", recogActive=false, wantRecog=false;
+
+  function toast(m){ toastEl.textContent=m; toastEl.classList.add("show");
+    clearTimeout(toastEl._t); toastEl._t=setTimeout(function(){toastEl.classList.remove("show");},2400); }
+
+  /* ---------- tarayıcı uyarısı ---------- */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var insecure = (location.protocol === "file:") || (window.isSecureContext === false);
+  if (insecure) {
+    warn.classList.add("show");
+    warn.innerHTML = "🔒 Dosyayı doğrudan açtın (file://). Bu modda telefon <b>mikrofonu engeller</b> — izin versen de çalışmaz. Mikrofonun açılması için uygulamayı bir <b>https</b> adresinden ya da kurulu <b>APK</b>'dan aç.";
+  } else if (!SR) {
+    warn.classList.add("show");
+    warn.innerHTML = "⚠️ Bu tarayıcı canlı metne çevirmeyi desteklemiyor. En iyi sonuç için Android'de <b>Chrome</b> kullan. (Kayıt yine de çalışır.)";
+  }
+
+  /* ---------- canvas ---------- */
+  function sizeCanvas(){ var d=window.devicePixelRatio||1; ctx.setTransform(1,0,0,1,0,0);
+    canvas.width=canvas.offsetWidth*d; canvas.height=canvas.offsetHeight*d; ctx.scale(d,d); }
+  window.addEventListener("resize", function(){ sizeCanvas(); drawIdle(); });
+  sizeCanvas(); drawIdle();
+  function drawIdle(){ var w=canvas.offsetWidth,h=canvas.offsetHeight; ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle="#d8cbb6"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke(); }
+  function drawWave(){ rafId=requestAnimationFrame(drawWave); if(!analyser)return;
+    analyser.getByteTimeDomainData(dataArr); var w=canvas.offsetWidth,h=canvas.offsetHeight;
+    ctx.clearRect(0,0,w,h); ctx.lineWidth=2.5; ctx.strokeStyle="#c4452d"; ctx.beginPath();
+    var s=w/dataArr.length; for(var i=0;i<dataArr.length;i++){ var v=dataArr[i]/128.0, y=(v*h)/2, x=i*s;
+      if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke(); }
+
+  function fmtTime(ms){ var t=Math.floor(ms/100), te=t%10, sec=Math.floor(t/10), m=Math.floor(sec/60), s=sec%60;
+    return ("0"+m).slice(-2)+":"+("0"+s).slice(-2)+"<span class='ms'>."+te+"</span>"; }
+  function tick(){ timerEl.innerHTML=fmtTime(Date.now()-startTime); }
+
+  /* ---------- konuşma tanıma ---------- */
+  var gotAnyResult=false, lastRecogError="";
+  function startRecog(){
+    if(!SR){
+      hint.textContent="Bu tarayıcı yazıya çevirmeyi desteklemiyor — Chrome kullan. (Kayıt yine de oluyor.)";
+      return;
+    }
+    recog = new SR();
+    recog.lang = "tr-TR";
+    recog.continuous = true;
+    recog.interimResults = true;
+    recog.onstart = function(){ recogActive=true; lastRecogError=""; };
+    recog.onresult = function(e){
+      gotAnyResult=true;
+      var interim="";
+      for(var i=e.resultIndex;i<e.results.length;i++){
+        var t=e.results[i][0].transcript;
+        if(e.results[i].isFinal){ finalText += (finalText && !/\s$/.test(finalText)?" ":"") + t.trim(); }
+        else interim += t;
+      }
+      liveFinal.textContent = finalText;
+      liveInterim.textContent = interim ? " "+interim : "";
+      liveBox.scrollTop = liveBox.scrollHeight;
+    };
+    recog.onend = function(){
+      recogActive=false;
+      if(wantRecog){ try{ recog.start(); recogActive=true; }catch(e){} }
+    };
+    recog.onerror = function(ev){
+      lastRecogError = ev.error || "bilinmeyen";
+      console.error("SpeechRecognition hata:", ev.error, ev);
+      var m;
+      switch(ev.error){
+        case "not-allowed":
+        case "service-not-allowed":
+          wantRecog=false;
+          m="Konuşma tanıma için mikrofon izni gerekli. Adres çubuğundaki kilit → Mikrofon → İzin ver."; break;
+        case "network":
+          m="İnternet hatası: yazıya çevirme Google sunucusuna bağlanamadı. Bağlantını kontrol et."; break;
+        case "audio-capture":
+          m="Mikrofona ulaşılamadı (başka uygulama/kayıt mikrofonu tutuyor olabilir)."; break;
+        case "no-speech":
+          m=""; break; // konuşma yoksa sessiz geç, otomatik yeniden başlar
+        case "aborted":
+          m=""; break;
+        default:
+          m="Yazıya çevirme hatası: "+ev.error;
+      }
+      if(m){ toast(m); hint.textContent=m; }
+    };
+    try{ recog.start(); recogActive=true; }
+    catch(e){ console.error(e); toast("Yazıya çevirme başlatılamadı: "+e.message); }
+  }
+  function stopRecog(){ wantRecog=false; if(recog){ try{recog.stop();}catch(e){} } }
+
+  /* ---------- kayıt ---------- */
+  recBtn.addEventListener("click", function(){ recording?stopRecording():startRecording(); });
+
+  function startRecording(){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast("Tarayıcı mikrofonu desteklemiyor"); return; }
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
+      stream=s; chunks=[]; finalText=""; gotAnyResult=false; liveFinal.textContent=""; liveInterim.textContent="";
+      var opts={};
+      if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm")) opts.mimeType="audio/webm";
+      mediaRecorder=new MediaRecorder(stream,opts);
+      mediaRecorder.ondataavailable=function(e){ if(e.data.size>0)chunks.push(e.data); };
+      mediaRecorder.onstop=onRecordingStop;
+      mediaRecorder.start();
+
+      audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      var src=audioCtx.createMediaStreamSource(stream);
+      analyser=audioCtx.createAnalyser(); analyser.fftSize=1024;
+      dataArr=new Uint8Array(analyser.fftSize); src.connect(analyser); drawWave();
+
+      recording=true;
+      recBtn.classList.add("recording"); timerEl.classList.add("live");
+      hint.textContent="Kaydediliyor & yazıya çevriliyor... durdurmak için tekrar dokun";
+      saveForm.classList.remove("show");
+      liveBox.classList.add("show");
+      startTime=Date.now(); timerId=setInterval(tick,100);
+
+      wantRecog=true; startRecog();
+    }).catch(function(err){
+      console.error(err);
+      var name = err && err.name ? err.name : "";
+      var msg;
+      if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") {
+        if (insecure) {
+          msg = "Mikrofon engellendi: dosyayı doğrudan açtın. https adresinden ya da kurulu APK'dan aç.";
+        } else {
+          msg = "Mikrofon izni reddedildi. Chrome adres çubuğundaki kilit/⋮ menüsünden Mikrofon → İzin ver yap, sonra sayfayı yenile.";
+        }
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        msg = "Mikrofon bulunamadı. Cihazda mikrofon erişimi var mı kontrol et.";
+      } else if (name === "NotReadableError") {
+        msg = "Mikrofon başka bir uygulama tarafından kullanılıyor olabilir. Diğer uygulamaları kapat.";
+      } else {
+        msg = "Mikrofon açılamadı." + (name ? " ("+name+")" : "");
+      }
+      toast(msg); hint.textContent = msg;
+    });
+  }
+
+  function stopRecording(){
+    if(mediaRecorder&&mediaRecorder.state!=="inactive") mediaRecorder.stop();
+    recording=false;
+    recBtn.classList.remove("recording"); timerEl.classList.remove("live");
+    clearInterval(timerId); cancelAnimationFrame(rafId); drawIdle();
+    if(stream) stream.getTracks().forEach(function(t){t.stop();});
+    if(audioCtx){ audioCtx.close(); audioCtx=null; analyser=null; }
+    stopRecog();
+  }
+
+  function onRecordingStop(){
+    var type=(chunks[0]&&chunks[0].type)||"audio/webm";
+    pendingBlob=new Blob(chunks,{type:type});
+    previewAudio.src=URL.createObjectURL(pendingBlob);
+    liveBox.classList.remove("show");
+
+    // konuşma tanımanın son parçalarını yakalamak için kısa bekleme
+    setTimeout(function(){
+      var text=(finalText+" "+(liveInterim.textContent||"")).trim();
+      transcriptInput.value=text;
+      if(text){
+        summaryBox.textContent = summarize(text);
+      } else if(!SR){
+        summaryBox.textContent = "(Bu tarayıcı yazıya çevirmiyor — Chrome kullan. Metni elle yazabilirsin.)";
+      } else if(lastRecogError==="network"){
+        summaryBox.textContent = "(İnternet yok/zayıf olduğu için yazıya çevrilemedi. Metni elle yazabilirsin.)";
+      } else if(!gotAnyResult){
+        summaryBox.textContent = "(Konuşma algılanmadı. Chrome'da mı? Mikrofon izni var mı? Metni elle yazabilirsin.)";
+      } else {
+        summaryBox.textContent = "(Metin boş — elle yazabilirsin.)";
+      }
+      saveForm.classList.add("show");
+      hint.textContent="Metni düzenle, özeti kontrol et ve kaydet";
+      titleInput.value=""; titleInput.focus();
+    }, 350);
+  }
+
+  // metni değiştirince özeti yenile
+  var sumTimer=null;
+  transcriptInput.addEventListener("input", function(){
+    clearTimeout(sumTimer);
+    sumTimer=setTimeout(function(){
+      var t=transcriptInput.value.trim();
+      summaryBox.textContent = t ? summarize(t) : "—";
+    }, 500);
+  });
+
+  /* ---------- özetleme (cihaz içi, internetsiz) ---------- */
+  var STOP = ("acaba ama ancak artık asla aslında az bana bazen bazı belki ben benden beni benim beri beş bile bin bir biraz biri birkaç birşey biz bizden bize bizi bizim böyle böylece bu buna bunda bundan bunu bunun burada bütün çok çünkü da daha dahi de defa değil diğer diye dolayı dolayısıyla edecek eden ederek edilecek ediliyor edilmesi ediyor eğer en fakat falan gibi göre hâlâ hangi hani hatta hem henüz hep hepsi her herhangi herkes herkesi hiç hiçbir için iki ile ilgili ise işte itibaren itibariyle kadar karşın kendi kendilerine kendini kendisi kendisine kendisini ki kim kime kimi kimse midir mu mü mı nasıl ne neden nedenle nerde nerede nereye niçin niye o olan olarak oldu olduğu olduğunu olduklarını olmadı olmadığı olması olmayan olmaz olsa olsun olup olur olursa oluyor on ona ondan onu onun oysa öyle pek rağmen sadece sanki şayet şekilde şey şu şöyle şunları şundan şunu ta tarafından tüm üzere var vardı ve veya ya yani yapacak yapılan yapılması yapıyor yapmak yaptı yaptığı yaptığını yaptıkları yerine yine yoksa yüzden zaten").split(" ");
+  var STOPSET={}; STOP.forEach(function(w){STOPSET[w]=1;});
+
+  function summarize(text){
+    text=text.replace(/\s+/g," ").trim();
+    // cümlelere böl
+    var sents = text.match(/[^.!?]+[.!?]*/g) || [text];
+    sents = sents.map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
+    if(sents.length<=2) return text;
+
+    // kelime frekansları
+    var freq={};
+    sents.forEach(function(s){
+      s.toLowerCase().replace(/[^a-zçğıöşü0-9\s]/g," ").split(/\s+/).forEach(function(w){
+        if(w.length<3||STOPSET[w])return; freq[w]=(freq[w]||0)+1;
+      });
+    });
+    var max=1; for(var k in freq){ if(freq[k]>max)max=freq[k]; }
+
+    // cümle puanla
+    var scored = sents.map(function(s,idx){
+      var words=s.toLowerCase().replace(/[^a-zçğıöşü0-9\s]/g," ").split(/\s+/);
+      var sc=0,n=0;
+      words.forEach(function(w){ if(w.length<3||STOPSET[w])return; sc+=(freq[w]||0)/max; n++; });
+      // ilk cümlelere küçük bonus
+      var posBonus = idx===0 ? 0.25 : (idx===1 ? 0.1 : 0);
+      return { idx:idx, sent:s, score:(n? sc/Math.sqrt(n):0)+posBonus };
+    });
+
+    // kaç cümle? metin uzunluğuna göre
+    var keep = Math.max(1, Math.min(3, Math.round(sents.length*0.35)));
+    var top = scored.slice().sort(function(a,b){return b.score-a.score;}).slice(0,keep);
+    top.sort(function(a,b){return a.idx-b.idx;});
+    return top.map(function(t){return t.sent;}).join(" ");
+  }
+
+  /* ---------- kaydet ---------- */
+  saveBtn.addEventListener("click", function(){
+    if(!pendingBlob){ toast("Önce bir kayıt al"); return; }
+    var reader=new FileReader();
+    reader.onload=function(){
+      notes.unshift({
+        id:Date.now(),
+        title:titleInput.value.trim(),
+        transcript:transcriptInput.value.trim(),
+        summary: transcriptInput.value.trim()? summarize(transcriptInput.value.trim()):"",
+        audio:reader.result,
+        date:new Date().toISOString()
+      });
+      saveNotes(notes); render(); resetForm(); toast("Not kaydedildi ✓");
+    };
+    reader.readAsDataURL(pendingBlob);
+  });
+  discardBtn.addEventListener("click", function(){ resetForm(); toast("Kayıt silindi"); });
+
+  function resetForm(){
+    saveForm.classList.remove("show"); pendingBlob=null; previewAudio.src="";
+    transcriptInput.value=""; summaryBox.textContent="—";
+    timerEl.innerHTML="00:00<span class='ms'>.0</span>";
+    hint.textContent="Kaydı başlatmak için kırmızı düğmeye dokun";
+  }
+
+  /* ---------- listele ---------- */
+  function fmtDate(iso){ var d=new Date(iso),
+    m=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+    return d.getDate()+" "+m[d.getMonth()]+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
+  function escapeHtml(s){ return s.replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+  function render(){
+    var q=(searchEl.value||"").toLowerCase().trim();
+    var filtered=notes.filter(function(n){ if(!q)return true;
+      return ((n.title||"")+" "+(n.transcript||"")+" "+(n.summary||"")).toLowerCase().indexOf(q)!==-1; });
+    countEl.textContent=notes.length?("Notların ("+notes.length+")"):"Notların";
+
+    if(!filtered.length){
+      notesEl.innerHTML=notes.length
+        ?'<div class="empty"><div class="big">🔍</div>Aramana uyan not yok.</div>'
+        :'<div class="empty"><div class="big">🎙️</div>Henüz notun yok. Yukarıdan ilk kaydını al!</div>';
+      return;
+    }
+    notesEl.innerHTML="";
+    filtered.forEach(function(n){
+      var div=document.createElement("div"); div.className="note";
+      var title=n.title?escapeHtml(n.title):"Adsız not";
+      var sum=n.summary?'<div class="sum">📝 '+escapeHtml(n.summary)+'</div>':'';
+      var tr=n.transcript?'<div class="transcript" data-tr="'+n.id+'">'+escapeHtml(n.transcript)+'</div>':'';
+      var trBtn=n.transcript?'<button class="link-btn" data-toggle="'+n.id+'">⤢ tam metin</button>':'';
+      div.innerHTML=
+        '<div class="note-top"><div class="note-title">'+title+'</div>'+
+        '<div class="note-date">'+fmtDate(n.date)+'</div></div>'+
+        sum+
+        '<audio controls src="'+n.audio+'"></audio>'+
+        tr+
+        '<div class="note-foot">'+trBtn+
+          '<button class="link-btn" data-dl="'+n.id+'">↓ ses</button>'+
+          '<button class="link-btn" data-txt="'+n.id+'">↓ metin</button>'+
+          '<button class="link-btn" data-word="'+n.id+'">↓ word</button>'+
+          '<button class="link-btn" data-pdf="'+n.id+'">↓ pdf</button>'+
+          '<button class="link-btn" data-del="'+n.id+'">✕ sil</button>'+
+        '</div>';
+      notesEl.appendChild(div);
+    });
+  }
+
+  notesEl.addEventListener("click", function(e){
+    var t=e.target;
+    var del=t.getAttribute("data-del"), dl=t.getAttribute("data-dl"),
+        txt=t.getAttribute("data-txt"), tog=t.getAttribute("data-toggle");
+    if(tog){ var el=document.querySelector('.transcript[data-tr="'+tog+'"]');
+      if(el){ el.classList.toggle("open"); t.textContent=el.classList.contains("open")?"⤡ gizle":"⤢ tam metin"; } }
+    if(del){ if(confirm("Bu notu silmek istediğine emin misin?")){
+      notes=notes.filter(function(n){return String(n.id)!==del;}); saveNotes(notes); render(); toast("Not silindi"); } }
+    if(dl){ var n1=notes.find(function(n){return String(n.id)===dl;});
+      if(n1){ var a=document.createElement("a"); a.href=n1.audio; a.download=(n1.title||"ses-notu")+".webm"; a.click(); } }
+    if(txt){ var n2=notes.find(function(n){return String(n.id)===txt;});
+      if(n2){ var content="# "+(n2.title||"Sesli Not")+"\n\nÖZET:\n"+(n2.summary||"-")+"\n\nMETİN:\n"+(n2.transcript||"-");
+        var blob=new Blob([content],{type:"text/plain;charset=utf-8"});
+        var a2=document.createElement("a"); a2.href=URL.createObjectURL(blob);
+        a2.download=(n2.title||"ses-notu")+".txt"; a2.click(); } }
+    var word=t.getAttribute("data-word"), pdf=t.getAttribute("data-pdf");
+    if(word){ var nw=notes.find(function(n){return String(n.id)===word;});
+      if(nw){ exportWord(nw); } }
+    if(pdf){ var np=notes.find(function(n){return String(n.id)===pdf;});
+      if(np){ exportPdf(np); } }
+  });
+
+  /* ---------- Word / PDF disa aktar ---------- */
+  function docBodyHtml(n){
+    var baslik=escapeHtml(n.title||"Sesli Not");
+    var tarih=fmtDate(n.date);
+    var ozet=escapeHtml(n.summary||"-").replace(/\n/g,"<br>");
+    var metin=escapeHtml(n.transcript||"-").replace(/\n/g,"<br>");
+    return ''+
+      '<h1 style="font-family:Arial,sans-serif;color:#c4452d;">'+baslik+'</h1>'+
+      '<p style="font-family:Arial,sans-serif;color:#777;font-size:12px;">'+tarih+'</p>'+
+      '<h2 style="font-family:Arial,sans-serif;">Özet</h2>'+
+      '<p style="font-family:Arial,sans-serif;line-height:1.5;">'+ozet+'</p>'+
+      '<h2 style="font-family:Arial,sans-serif;">Metin</h2>'+
+      '<p style="font-family:Arial,sans-serif;line-height:1.6;">'+metin+'</p>';
+  }
+
+  function exportWord(n){
+    var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+
+      escapeHtml(n.title||"Sesli Not")+'</title></head><body>'+docBodyHtml(n)+'</body></html>';
+    var blob=new Blob(['\ufeff'+html],{type:"application/msword;charset=utf-8"});
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=(n.title||"ses-notu").replace(/[\\/:*?"<>|]/g,"-")+".doc";
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("Word indiriliyor");
+  }
+
+  function exportPdf(n){
+    var w=window.open("","_blank");
+    if(!w){ toast("Açılır pencere engellendi — izin ver, tekrar dene"); return; }
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">'+
+      '<title>'+escapeHtml(n.title||"Sesli Not")+'</title>'+
+      '<style>@page{margin:2cm;} body{margin:0;}</style></head><body>'+
+      docBodyHtml(n)+
+      '<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>'+
+      '</body></html>');
+    w.document.close();
+    toast('Yazdır ekranında "PDF olarak kaydet" seç');
+  }
+
+  searchEl.addEventListener("input", render);
+  render();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
