@@ -328,13 +328,19 @@
   function tick(){ timerEl.innerHTML=fmtTime(Date.now()-startTime); }
 
   /* ---------- konuşma tanıma ---------- */
+  var gotAnyResult=false, lastRecogError="";
   function startRecog(){
-    if(!SR) return;
+    if(!SR){
+      hint.textContent="Bu tarayıcı yazıya çevirmeyi desteklemiyor — Chrome kullan. (Kayıt yine de oluyor.)";
+      return;
+    }
     recog = new SR();
     recog.lang = "tr-TR";
     recog.continuous = true;
     recog.interimResults = true;
+    recog.onstart = function(){ recogActive=true; lastRecogError=""; };
     recog.onresult = function(e){
+      gotAnyResult=true;
       var interim="";
       for(var i=e.resultIndex;i<e.results.length;i++){
         var t=e.results[i][0].transcript;
@@ -350,12 +356,29 @@
       if(wantRecog){ try{ recog.start(); recogActive=true; }catch(e){} }
     };
     recog.onerror = function(ev){
-      if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){
-        wantRecog=false;
-        toast("Konuşma tanıma için izin gerekli");
+      lastRecogError = ev.error || "bilinmeyen";
+      console.error("SpeechRecognition hata:", ev.error, ev);
+      var m;
+      switch(ev.error){
+        case "not-allowed":
+        case "service-not-allowed":
+          wantRecog=false;
+          m="Konuşma tanıma için mikrofon izni gerekli. Adres çubuğundaki kilit → Mikrofon → İzin ver."; break;
+        case "network":
+          m="İnternet hatası: yazıya çevirme Google sunucusuna bağlanamadı. Bağlantını kontrol et."; break;
+        case "audio-capture":
+          m="Mikrofona ulaşılamadı (başka uygulama/kayıt mikrofonu tutuyor olabilir)."; break;
+        case "no-speech":
+          m=""; break; // konuşma yoksa sessiz geç, otomatik yeniden başlar
+        case "aborted":
+          m=""; break;
+        default:
+          m="Yazıya çevirme hatası: "+ev.error;
       }
+      if(m){ toast(m); hint.textContent=m; }
     };
-    try{ recog.start(); recogActive=true; }catch(e){}
+    try{ recog.start(); recogActive=true; }
+    catch(e){ console.error(e); toast("Yazıya çevirme başlatılamadı: "+e.message); }
   }
   function stopRecog(){ wantRecog=false; if(recog){ try{recog.stop();}catch(e){} } }
 
@@ -365,7 +388,7 @@
   function startRecording(){
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast("Tarayıcı mikrofonu desteklemiyor"); return; }
     navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
-      stream=s; chunks=[]; finalText=""; liveFinal.textContent=""; liveInterim.textContent="";
+      stream=s; chunks=[]; finalText=""; gotAnyResult=false; liveFinal.textContent=""; liveInterim.textContent="";
       var opts={};
       if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm")) opts.mimeType="audio/webm";
       mediaRecorder=new MediaRecorder(stream,opts);
@@ -427,7 +450,17 @@
     setTimeout(function(){
       var text=(finalText+" "+(liveInterim.textContent||"")).trim();
       transcriptInput.value=text;
-      summaryBox.textContent = text ? summarize(text) : "(Konuşma algılanmadı — metni elle yazabilirsin.)";
+      if(text){
+        summaryBox.textContent = summarize(text);
+      } else if(!SR){
+        summaryBox.textContent = "(Bu tarayıcı yazıya çevirmiyor — Chrome kullan. Metni elle yazabilirsin.)";
+      } else if(lastRecogError==="network"){
+        summaryBox.textContent = "(İnternet yok/zayıf olduğu için yazıya çevrilemedi. Metni elle yazabilirsin.)";
+      } else if(!gotAnyResult){
+        summaryBox.textContent = "(Konuşma algılanmadı. Chrome'da mı? Mikrofon izni var mı? Metni elle yazabilirsin.)";
+      } else {
+        summaryBox.textContent = "(Metin boş — elle yazabilirsin.)";
+      }
       saveForm.classList.add("show");
       hint.textContent="Metni düzenle, özeti kontrol et ve kaydet";
       titleInput.value=""; titleInput.focus();
