@@ -447,6 +447,7 @@
 
   <div class="tools-row">
     <button class="tool-btn" id="chatBtn" type="button">💬 Notlarımla sohbet</button>
+    <button class="tool-btn" id="shareBtn" type="button">🔗 Arkadaşa paylaş</button>
   </div>
 
   <div class="list-head">
@@ -709,7 +710,7 @@
       editSaveBtn=$("editSaveBtn"), editCancelBtn=$("editCancelBtn"),
       cloudToggle=$("cloudToggle"), fbConfigInput=$("fbConfigInput"), cloudStatus=$("cloudStatus"),
       photoBtn=$("photoBtn"), photoInput=$("photoInput"), photoPreview=$("photoPreview"),
-      chatBtn=$("chatBtn"), sortSel=$("sortSel"),
+      chatBtn=$("chatBtn"), sortSel=$("sortSel"), shareBtn=$("shareBtn"),
       chatSheet=$("chatSheet"), chatMsgs=$("chatMsgs"), chatInput=$("chatInput"),
       chatSendBtn=$("chatSendBtn"), chatCloseBtn=$("chatCloseBtn"), chatScope=$("chatScope"),
       infoSheet=$("infoSheet"), infoTitle=$("infoTitle"), infoBody=$("infoBody"), infoCloseBtn=$("infoCloseBtn"),
@@ -1515,6 +1516,41 @@
     };
     r.readAsText(f);
   });
+
+  /* ---------- arkadaşa paylaş (bağlantıyı linke göm) ---------- */
+  function encodeCfg(str){ try{ return encodeURIComponent(btoa(unescape(encodeURIComponent(str)))); }catch(e){ return ""; } }
+  function decodeCfg(enc){ try{ return decodeURIComponent(escape(atob(decodeURIComponent(enc)))); }catch(e){ return ""; } }
+  function shareLink(){
+    var enc=encodeCfg(settings.fbConfig||"");
+    return location.origin+location.pathname+"#cfg="+enc;
+  }
+  shareBtn.addEventListener("click", function(){
+    if(!cloudOn || !(settings.fbConfig||"").trim()){
+      toast("Önce ⚙ Ayarlar'dan bulutu bağla (Bağlandı ✓ görmelisin)"); openSettings(); return;
+    }
+    var link=shareLink();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(function(){
+        showInfo("🔗 Paylaşım linki", "Link kopyalandı! Arkadaşına gönder — açınca tüm notlarını görür.\n\n"+link);
+      }).catch(function(){ showInfo("🔗 Paylaşım linki", "Bu linki kopyalayıp arkadaşına gönder:\n\n"+link); });
+    } else {
+      showInfo("🔗 Paylaşım linki", "Bu linki kopyalayıp arkadaşına gönder:\n\n"+link);
+    }
+  });
+
+  // gelen paylaşım linkinden otomatik bağlan
+  (function(){
+    var h=location.hash||"";
+    var i=h.indexOf("cfg=");
+    if(i!==-1){
+      var enc=h.slice(i+4);
+      var cfgStr=decodeCfg(enc);
+      if(cfgStr && parseFbConfig(cfgStr)){
+        settings.fbConfig=cfgStr; settings.cloudOn=true; saveSettings();
+        try{ history.replaceState(null,"",location.pathname); }catch(e){}
+      }
+    }
+  })();
 
   /* ---------- başlat ---------- */
   renderModbar();
