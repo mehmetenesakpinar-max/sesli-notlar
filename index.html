@@ -567,6 +567,7 @@
     <div class="info-body" id="infoBody"></div>
     <div class="form-actions">
       <button class="btn ghost" id="infoCloseBtn">Kapat</button>
+      <button class="btn" id="infoCopyBtn" type="button" style="display:none;">📋 Kopyala</button>
     </div>
   </div>
 </div>
@@ -714,6 +715,7 @@
       chatSheet=$("chatSheet"), chatMsgs=$("chatMsgs"), chatInput=$("chatInput"),
       chatSendBtn=$("chatSendBtn"), chatCloseBtn=$("chatCloseBtn"), chatScope=$("chatScope"),
       infoSheet=$("infoSheet"), infoTitle=$("infoTitle"), infoBody=$("infoBody"), infoCloseBtn=$("infoCloseBtn"),
+      infoCopyBtn=$("infoCopyBtn"),
       imgViewer=$("imgViewer"), imgViewerImg=$("imgViewerImg"),
       backupBtn=$("backupBtn"), restoreBtn=$("restoreBtn"), restoreInput=$("restoreInput");
 
@@ -1407,8 +1409,17 @@
   }
 
   /* ---------- bilgi paneli ---------- */
-  function showInfo(title, body){
-    infoTitle.textContent=title; infoBody.textContent=body; infoSheet.classList.add("show");
+  function showInfo(title, body, copyText){
+    infoTitle.textContent=title; infoBody.textContent=body;
+    if(copyText){
+      infoCopyBtn.style.display="";
+      infoCopyBtn.onclick=function(){
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(copyText).then(function(){ toast("Kopyalandı ✓"); }).catch(function(){ toast("Kopyalanamadı, elle seç"); });
+        } else { toast("Metni elle seçip kopyala"); }
+      };
+    } else { infoCopyBtn.style.display="none"; infoCopyBtn.onclick=null; }
+    infoSheet.classList.add("show");
   }
   infoCloseBtn.addEventListener("click", function(){ infoSheet.classList.remove("show"); });
   infoSheet.addEventListener("click", function(e){ if(e.target===infoSheet) infoSheet.classList.remove("show"); });
@@ -1517,12 +1528,12 @@
     r.readAsText(f);
   });
 
-  /* ---------- arkadaşa paylaş (bağlantıyı linke göm) ---------- */
-  function encodeCfg(str){ try{ return encodeURIComponent(btoa(unescape(encodeURIComponent(str)))); }catch(e){ return ""; } }
+  /* ---------- arkadaşa paylaş (kısa link) ---------- */
   function decodeCfg(enc){ try{ return decodeURIComponent(escape(atob(decodeURIComponent(enc)))); }catch(e){ return ""; } }
   function shareLink(){
-    var enc=encodeCfg(settings.fbConfig||"");
-    return location.origin+location.pathname+"#cfg="+enc;
+    var cfg=parseFbConfig(settings.fbConfig||"")||{};
+    var k=cfg.apiKey||"", p=cfg.projectId||"";
+    return location.origin+location.pathname+"#k="+encodeURIComponent(k)+"&p="+encodeURIComponent(p);
   }
   shareBtn.addEventListener("click", function(){
     if(!cloudOn || !(settings.fbConfig||"").trim()){
@@ -1530,20 +1541,24 @@
     }
     var link=shareLink();
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(link).then(function(){
-        showInfo("🔗 Paylaşım linki", "Link kopyalandı! Arkadaşına gönder — açınca tüm notlarını görür.\n\n"+link);
-      }).catch(function(){ showInfo("🔗 Paylaşım linki", "Bu linki kopyalayıp arkadaşına gönder:\n\n"+link); });
-    } else {
-      showInfo("🔗 Paylaşım linki", "Bu linki kopyalayıp arkadaşına gönder:\n\n"+link);
+      navigator.clipboard.writeText(link).then(function(){ toast("Link kopyalandı ✓"); }).catch(function(){});
     }
+    showInfo("🔗 Paylaşım linki", "Bu linki arkadaşına gönder. Açınca tüm notlarını görür:\n\n"+link, link);
   });
 
-  // gelen paylaşım linkinden otomatik bağlan
+  // gelen paylaşım linkinden otomatik bağlan (kısa veya eski format)
   (function(){
     var h=location.hash||"";
-    var i=h.indexOf("cfg=");
-    if(i!==-1){
-      var enc=h.slice(i+4);
+    var km=h.match(/[#&]k=([^&]+)/), pm=h.match(/[#&]p=([^&]+)/);
+    if(km && pm){
+      var k=decodeURIComponent(km[1]), p=decodeURIComponent(pm[1]);
+      if(k && p){
+        var cfg={apiKey:k, projectId:p, authDomain:p+".firebaseapp.com"};
+        settings.fbConfig=JSON.stringify(cfg); settings.cloudOn=true; saveSettings();
+        try{ history.replaceState(null,"",location.pathname); }catch(e){}
+      }
+    } else if(h.indexOf("cfg=")!==-1){
+      var enc=h.slice(h.indexOf("cfg=")+4);
       var cfgStr=decodeCfg(enc);
       if(cfgStr && parseFbConfig(cfgStr)){
         settings.fbConfig=cfgStr; settings.cloudOn=true; saveSettings();
