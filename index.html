@@ -14,6 +14,9 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spline+Sans+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
@@ -428,6 +431,19 @@
       üzerinden alabilirsin (cüzi bir ücreti vardır). Anahtar girmezsen ücretsiz özetleyici çalışır.
     </p>
 
+    <hr style="border:none;border-top:1.5px solid var(--line);margin:18px 0;">
+    <h3 style="font-size:18px;">☁️ Bulut paylaşımı</h3>
+    <p class="note-txt">Açıldığında notların (metin + özet) buluta kaydolur ve linki açan herkes görür. <b>Sesler paylaşılmaz</b>, yalnızca kaydeden cihazda kalır. Ücretsiz Firebase gerekir.</p>
+
+    <div class="toggle-row">
+      <input type="checkbox" id="cloudToggle">
+      <label for="cloudToggle">Bulut senkronizasyonunu aç</label>
+    </div>
+
+    <span class="field-label">Firebase config (panelden kopyala-yapıştır)</span>
+    <textarea id="fbConfigInput" rows="7" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", ... };' style="width:100%;font-family:Spline Sans Mono,monospace;font-size:12px;background:#fffdf8;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--ink);"></textarea>
+    <p class="small" id="cloudStatus">Bağlı değil. Kurulum adımları için aşağıdaki Kaydet'e bastıktan sonra yönergeleri izle.</p>
+
     <div class="form-actions">
       <button class="btn ghost" id="settingsCloseBtn">Kapat</button>
       <button class="btn" id="settingsSaveBtn">Kaydet</button>
@@ -483,8 +499,8 @@
   var activeModule = loadJSON("sesli_aktif_modul", "*"); // "*" = tümü
   function setActiveModule(m){ activeModule=m; saveJSON("sesli_aktif_modul", m); }
 
-  var settings = loadJSON("sesli_ayarlar", { aiOn:false, aiKey:"", theme:"light" });
-  if(typeof settings!=="object"||!settings) settings={ aiOn:false, aiKey:"", theme:"light" };
+  var settings = loadJSON("sesli_ayarlar", { aiOn:false, aiKey:"", theme:"light", cloudOn:false, fbConfig:"" });
+  if(typeof settings!=="object"||!settings) settings={ aiOn:false, aiKey:"", theme:"light", cloudOn:false, fbConfig:"" };
 
   /* ---------- IndexedDB (büyük ses dosyaları için) ---------- */
   var DB_NAME="sesli_db", DB_STORE="audio", _db=null;
@@ -525,6 +541,58 @@
     if(m.indexOf("ogg")!==-1 || m.indexOf("opus")!==-1) return ".ogg";
     return ".webm";
   }
+
+  /* ---------- bulut (Firebase Firestore) ---------- */
+  var cloudOn=false, db=null;
+  function setCloudStatus(msg){ if(cloudStatus) cloudStatus.textContent=msg; }
+  function parseFbConfig(raw){
+    if(!raw) return null;
+    try{
+      var m=String(raw).match(/\{[\s\S]*\}/); if(!m) return null;
+      var t=m[0];
+      t=t.replace(/([{,]\s*)([A-Za-z0-9_]+)\s*:/g,'$1"$2":');
+      t=t.replace(/'/g,'"');
+      t=t.replace(/,(\s*[}\]])/g,'$1');
+      var cfg=JSON.parse(t);
+      return (cfg.apiKey && cfg.projectId) ? cfg : null;
+    }catch(e){ return null; }
+  }
+  function cloudInit(){
+    if(typeof firebase==="undefined"){ setCloudStatus("Firebase kütüphanesi yüklenemedi (internet bağlantını kontrol et)."); return; }
+    var cfg=parseFbConfig(settings.fbConfig);
+    if(!cfg){ setCloudStatus("Config okunamadı. Firebase panelinden kopyaladığın firebaseConfig'i olduğu gibi yapıştır."); return; }
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(cfg);
+      db=firebase.firestore();
+      cloudOn=true;
+      setCloudStatus("Bağlandı ✓ Notların (metin+özet) buluta kaydoluyor.");
+      db.collection("notes").onSnapshot(function(snap){
+        var arr=[];
+        snap.forEach(function(doc){ var d=doc.data()||{}; d.id=(/^\d+$/.test(doc.id))?(+doc.id):doc.id; d.cloud=true; arr.push(d); });
+        arr.sort(function(a,b){ return String(b.date||"").localeCompare(String(a.date||"")); });
+        notes=arr; saveJSON("sesli_notlar", notes); render();
+      }, function(err){ console.error(err); setCloudStatus("Bulut okuma hatası ("+(err.code||err.message)+"). Firestore kurallarını kontrol et."); });
+      db.collection("meta").doc("app").onSnapshot(function(doc){
+        var d=doc.exists?doc.data():null;
+        if(d && Array.isArray(d.modules) && d.modules.length){ modules=d.modules; saveModules(); renderModbar(); fillModuleSelect(); }
+      }, function(){});
+    }catch(e){ console.error(e); cloudOn=false; setCloudStatus("Bağlanılamadı: "+(e.message||e)); }
+  }
+  function cloudPushNote(n){
+    if(!cloudOn||!db) return;
+    db.collection("notes").doc(String(n.id)).set({
+      title:n.title||"", transcript:n.transcript||"", summary:n.summary||"",
+      module:n.module||"Genel", date:n.date||new Date().toISOString(), pinned:!!n.pinned
+    }).catch(function(e){ console.error(e); toast("Buluta yazılamadı: "+(e.code||e.message)); });
+  }
+  function cloudDeleteNote(id){
+    if(!cloudOn||!db) return;
+    db.collection("notes").doc(String(id)).delete().catch(function(e){ console.error(e); });
+  }
+  function cloudPushModules(){
+    if(!cloudOn||!db) return;
+    db.collection("meta").doc("app").set({modules:modules},{merge:true}).catch(function(e){ console.error(e); });
+  }
   function saveSettings(){ saveJSON("sesli_ayarlar", settings); }
 
   /* ---------- DOM ---------- */
@@ -540,7 +608,8 @@
       themeToggle=$("themeToggle"), importBtn=$("importBtn"), fileInput=$("fileInput"),
       editSheet=$("editSheet"), editTitle=$("editTitle"), editModule=$("editModule"),
       editSummary=$("editSummary"), editTranscript=$("editTranscript"),
-      editSaveBtn=$("editSaveBtn"), editCancelBtn=$("editCancelBtn");
+      editSaveBtn=$("editSaveBtn"), editCancelBtn=$("editCancelBtn"),
+      cloudToggle=$("cloudToggle"), fbConfigInput=$("fbConfigInput"), cloudStatus=$("cloudStatus");
 
   var mediaRecorder=null, chunks=[], stream=null;
   var audioCtx=null, analyser=null, rafId=null, dataArr=null;
@@ -840,7 +909,7 @@
   moduleSelect.addEventListener("change", function(){
     if(moduleSelect.value==="__new__"){
       var name=(prompt("Yeni modül / ders adı:")||"").trim();
-      if(name && modules.indexOf(name)===-1){ modules.push(name); saveModules(); renderModbar(); }
+      if(name && modules.indexOf(name)===-1){ modules.push(name); saveModules(); cloudPushModules(); renderModbar(); }
       fillModuleSelect();
       if(name && modules.indexOf(name)!==-1) moduleSelect.value=name;
     }
@@ -870,7 +939,7 @@
       var name=(prompt("Yeni modül / ders adı:")||"").trim();
       if(!name) return;
       if(modules.indexOf(name)!==-1){ toast("Bu modül zaten var"); return; }
-      modules.push(name); saveModules(); setActiveModule(name); renderModbar(); render();
+      modules.push(name); saveModules(); cloudPushModules(); setActiveModule(name); renderModbar(); render();
     });
     branch.appendChild(addb);
   }
@@ -885,7 +954,7 @@
              : (transcriptInput.value.trim()? summarizeLocal(transcriptInput.value.trim()):"");
     saveBtn.disabled=true; toast("Kaydediliyor...");
     idbPut(id, pendingBlob).then(function(){
-      notes.unshift({
+      var newNote={
         id:id,
         title:titleInput.value.trim(),
         transcript:transcriptInput.value.trim(),
@@ -894,8 +963,10 @@
         mime:pendingBlob.type||"",
         module:mod,
         date:new Date().toISOString()
-      });
+      };
+      notes.unshift(newNote);
       saveNotes(notes); render(); resetForm(); toast("Not kaydedildi ✓ ("+mod+")");
+      cloudPushNote(newNote);
     }).catch(function(e){
       console.error(e);
       toast("Kaydedilemedi: cihaz hafızası yetersiz olabilir ("+(e.message||"hata")+")");
@@ -980,18 +1051,23 @@
       notesEl.appendChild(div);
     });
 
-    // büyük ses dosyalarını IndexedDB'den yükle
+    // sesleri IndexedDB'den yükle; bu cihazda yoksa not göster
     if(window._audioUrls){ window._audioUrls.forEach(function(u){ try{URL.revokeObjectURL(u);}catch(e){} }); }
     window._audioUrls=[];
     filtered.forEach(function(n){
-      if(n.hasBlob && !n.audio){
-        idbGet(n.id).then(function(blob){
-          if(!blob) return;
-          var url=URL.createObjectURL(blob); window._audioUrls.push(url);
-          var au=notesEl.querySelector('audio[data-audio="'+n.id+'"]');
-          if(au) au.src=url;
-        }).catch(function(){});
-      }
+      if(n.audio) return; // eski base64 notlar zaten src'li
+      idbGet(n.id).then(function(blob){
+        var au=notesEl.querySelector('audio[data-audio="'+n.id+'"]');
+        if(!au) return;
+        if(blob){
+          var url=URL.createObjectURL(blob); window._audioUrls.push(url); au.src=url;
+        } else {
+          var span=document.createElement("div");
+          span.style.cssText="font-family:Spline Sans Mono,monospace;font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:4px;";
+          span.textContent="🔇 Ses yalnızca kaydeden cihazda (bulutta paylaşılmaz)";
+          au.parentNode.replaceChild(span, au);
+        }
+      }).catch(function(){});
     });
   }
 
@@ -1003,10 +1079,10 @@
       : "'"+activeModule+"' modülünü sil?";
     if(!confirm(msg)) return;
     if(modules.indexOf("Genel")===-1){ modules.push("Genel"); }
-    notes.forEach(function(n){ if(noteModule(n)===activeModule) n.module="Genel"; });
+    notes.forEach(function(n){ if(noteModule(n)===activeModule){ n.module="Genel"; cloudPushNote(n); } });
     modules = modules.filter(function(m){ return m!==activeModule; });
     if(!modules.length) modules=["Genel"];
-    saveModules(); saveNotes(notes); setActiveModule("*");
+    saveModules(); cloudPushModules(); saveNotes(notes); setActiveModule("*");
     renderModbar(); render(); toast("Modül silindi");
   }
 
@@ -1022,10 +1098,10 @@
       if(au){ var seq=[1,1.5,2], cur=au.playbackRate||1, ni=(seq.indexOf(cur)+1)%seq.length, nr=seq[ni];
         au.playbackRate=nr; t.textContent="⏩ "+nr+"x"; } }
     if(pin){ var np2=notes.find(function(n){return String(n.id)===pin;});
-      if(np2){ np2.pinned=!np2.pinned; saveNotes(notes); render(); toast(np2.pinned?"Sabitlendi ★":"Sabit kaldırıldı"); } }
+      if(np2){ np2.pinned=!np2.pinned; saveNotes(notes); render(); cloudPushNote(np2); toast(np2.pinned?"Sabitlendi ★":"Sabit kaldırıldı"); } }
     if(edit){ var ne=notes.find(function(n){return String(n.id)===edit;}); if(ne) openEdit(ne); }
     if(del){ if(confirm("Bu notu silmek istediğine emin misin?")){
-      idbDel(del);
+      idbDel(del); cloudDeleteNote(del);
       notes=notes.filter(function(n){return String(n.id)!==del;}); saveNotes(notes); render(); toast("Not silindi"); } }
     if(dl){ var n1=notes.find(function(n){return String(n.id)===dl;});
       if(n1){
@@ -1070,6 +1146,7 @@
       n.transcript=editTranscript.value.trim();
       n.module=editModule.value || modules[0];
       saveNotes(notes); render(); toast("Not güncellendi ✓");
+      cloudPushNote(n);
     }
     closeEdit();
   });
@@ -1113,6 +1190,8 @@
     aiToggle.checked=!!settings.aiOn;
     aiKeyInput.value=settings.aiKey||"";
     themeToggle.checked=settings.theme==="dark";
+    cloudToggle.checked=!!settings.cloudOn;
+    fbConfigInput.value=settings.fbConfig||"";
     settingsSheet.classList.add("show");
   }
   function closeSettings(){ settingsSheet.classList.remove("show"); }
@@ -1126,8 +1205,18 @@
     settings.aiOn=aiToggle.checked;
     settings.aiKey=aiKeyInput.value.trim();
     settings.theme=themeToggle.checked?"dark":"light";
+    var wasOff=!settings.cloudOn;
+    settings.cloudOn=cloudToggle.checked;
+    settings.fbConfig=fbConfigInput.value.trim();
     saveSettings(); applyTheme();
-    toast(settings.aiOn && settings.aiKey ? "Yapay zeka açık ✓" : "Ayarlar kaydedildi");
+    if(settings.cloudOn && settings.fbConfig){
+      cloudInit();
+      toast("Bulut bağlanıyor...");
+      return; // panel açık kalsın, durum mesajını görsün
+    } else {
+      if(!settings.cloudOn && cloudOn){ cloudOn=false; toast("Bulut kapatıldı (yenileyince tam ayrılır)"); }
+      else toast(settings.aiOn && settings.aiKey ? "Yapay zeka açık ✓" : "Ayarlar kaydedildi");
+    }
     closeSettings();
   });
 
@@ -1155,6 +1244,7 @@
   renderModbar();
   fillModuleSelect();
   render();
+  if(settings.cloudOn && settings.fbConfig){ cloudInit(); }
 })();
 </script>
 <script>
