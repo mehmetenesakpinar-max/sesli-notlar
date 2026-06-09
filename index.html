@@ -284,6 +284,44 @@
   .sheet-card .small { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
   .sheet-card .small a { color: var(--accent); }
 
+  /* karanlık mod */
+  html[data-theme="dark"] {
+    --bg: #1c1814;
+    --paper: #272019;
+    --ink: #f0e6d6;
+    --ink-soft: #b3a48f;
+    --accent: #e0653f;
+    --accent-deep: #c4452d;
+    --amber: #e0a35a;
+    --line: #463b2e;
+    --shadow: rgba(0,0,0,0.5);
+  }
+  html[data-theme="dark"] .save-form input,
+  html[data-theme="dark"] .save-form textarea,
+  html[data-theme="dark"] .save-form select,
+  html[data-theme="dark"] .live-box,
+  html[data-theme="dark"] .sheet-card input { background:#1f1a14; }
+  html[data-theme="dark"] .summary-box { background: linear-gradient(180deg,#332a20,#2b231a); }
+  html[data-theme="dark"] .note .sum { background:#332a20; }
+  html[data-theme="dark"] .note-badge { background:#332a20; }
+  html[data-theme="dark"] .btn { background: var(--accent); border-color: var(--accent); color:#fff; }
+  html[data-theme="dark"] .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  html[data-theme="dark"] audio { filter: invert(0.9) hue-rotate(180deg); }
+
+  /* dosya yükle */
+  .import-row { text-align:center; margin-top:14px; }
+  .import-btn {
+    font-family:'Spline Sans Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    background:transparent; border:1.5px dashed var(--line); color:var(--ink-soft);
+    border-radius:9px; padding:8px 14px; cursor:pointer; transition:all .2s;
+  }
+  .import-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* sabitleme + hız */
+  .note.pinned { border-color: var(--amber); box-shadow: 0 10px 26px -18px rgba(217,138,61,0.6); }
+  .pin-flag { color: var(--amber); margin-right:4px; }
+  .speed-btn { color: var(--accent-deep); }
+
   footer { text-align: center; margin-top: 40px; color: var(--ink-soft); font-size: 13px; font-style: italic; }
 </style>
 </head>
@@ -306,6 +344,11 @@
       <button class="rec-btn" id="recBtn" aria-label="Kaydet"><span class="dot"></span></button>
     </div>
     <div class="hint" id="hint">Kaydı başlatmak için kırmızı düğmeye dokun</div>
+
+    <div class="import-row">
+      <button class="import-btn" id="importBtn" type="button">📁 Hazır ses dosyası yükle</button>
+      <input type="file" id="fileInput" accept="audio/*" hidden>
+    </div>
 
     <div class="live-box" id="liveBox">
       <span class="label">Canlı metin</span>
@@ -356,6 +399,11 @@
     <p class="note-txt">Yapay zeka ile özetleme isteğe bağlıdır. Kapalıyken ücretsiz, internetsiz cihaz-içi özetleyici kullanılır.</p>
 
     <div class="toggle-row">
+      <input type="checkbox" id="themeToggle">
+      <label for="themeToggle">🌙 Karanlık mod</label>
+    </div>
+
+    <div class="toggle-row">
       <input type="checkbox" id="aiToggle">
       <label for="aiToggle">Yapay zeka ile özetle (Claude)</label>
     </div>
@@ -371,6 +419,30 @@
     <div class="form-actions">
       <button class="btn ghost" id="settingsCloseBtn">Kapat</button>
       <button class="btn" id="settingsSaveBtn">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- not düzenle -->
+<div class="sheet" id="editSheet">
+  <div class="sheet-card">
+    <h3>Notu düzenle</h3>
+
+    <span class="field-label">Başlık</span>
+    <input type="text" id="editTitle" placeholder="Başlık" maxlength="80">
+
+    <span class="field-label">Modül / Ders</span>
+    <select id="editModule"></select>
+
+    <span class="field-label">Özet</span>
+    <textarea id="editSummary" rows="3" placeholder="Özet"></textarea>
+
+    <span class="field-label">Metin</span>
+    <textarea id="editTranscript" rows="6" placeholder="Metin"></textarea>
+
+    <div class="form-actions">
+      <button class="btn ghost" id="editCancelBtn">İptal</button>
+      <button class="btn" id="editSaveBtn">Güncelle</button>
     </div>
   </div>
 </div>
@@ -399,8 +471,8 @@
   var activeModule = loadJSON("sesli_aktif_modul", "*"); // "*" = tümü
   function setActiveModule(m){ activeModule=m; saveJSON("sesli_aktif_modul", m); }
 
-  var settings = loadJSON("sesli_ayarlar", { aiOn:false, aiKey:"" });
-  if(typeof settings!=="object"||!settings) settings={ aiOn:false, aiKey:"" };
+  var settings = loadJSON("sesli_ayarlar", { aiOn:false, aiKey:"", theme:"light" });
+  if(typeof settings!=="object"||!settings) settings={ aiOn:false, aiKey:"", theme:"light" };
   function saveSettings(){ saveJSON("sesli_ayarlar", settings); }
 
   /* ---------- DOM ---------- */
@@ -412,7 +484,11 @@
       moduleSelect=$("moduleSelect"), saveBtn=$("saveBtn"), discardBtn=$("discardBtn"), notesEl=$("notes"),
       countEl=$("count"), searchEl=$("search"), toastEl=$("toast"), warn=$("warn"), modbar=$("modbar"),
       settingsBtn=$("settingsBtn"), settingsSheet=$("settingsSheet"), aiToggle=$("aiToggle"),
-      aiKeyInput=$("aiKeyInput"), settingsSaveBtn=$("settingsSaveBtn"), settingsCloseBtn=$("settingsCloseBtn");
+      aiKeyInput=$("aiKeyInput"), settingsSaveBtn=$("settingsSaveBtn"), settingsCloseBtn=$("settingsCloseBtn"),
+      themeToggle=$("themeToggle"), importBtn=$("importBtn"), fileInput=$("fileInput"),
+      editSheet=$("editSheet"), editTitle=$("editTitle"), editModule=$("editModule"),
+      editSummary=$("editSummary"), editTranscript=$("editTranscript"),
+      editSaveBtn=$("editSaveBtn"), editCancelBtn=$("editCancelBtn");
 
   var mediaRecorder=null, chunks=[], stream=null;
   var audioCtx=null, analyser=null, rafId=null, dataArr=null;
@@ -786,6 +862,13 @@
     var label = activeModule==="*" ? "Tüm notlar" : activeModule;
     countEl.textContent = label + (inMod.length?(" ("+inMod.length+")"):"");
 
+    // sabitlenenler üstte
+    filtered = filtered.slice().sort(function(a,b){
+      var pa=a.pinned?1:0, pb=b.pinned?1:0;
+      if(pa!==pb) return pb-pa;
+      return 0;
+    });
+
     // modül silme bağlantısı
     var existingDel=document.getElementById("modDelBtn");
     if(existingDel) existingDel.remove();
@@ -806,8 +889,8 @@
     }
     notesEl.innerHTML="";
     filtered.forEach(function(n){
-      var div=document.createElement("div"); div.className="note";
-      var title=n.title?escapeHtml(n.title):"Adsız not";
+      var div=document.createElement("div"); div.className="note"+(n.pinned?" pinned":"");
+      var title=(n.pinned?'<span class="pin-flag">★</span>':'')+(n.title?escapeHtml(n.title):"Adsız not");
       var badge='<span class="note-badge">⬡ '+escapeHtml(noteModule(n))+'</span>';
       var sum=n.summary?'<div class="sum">📝 '+escapeHtml(n.summary)+'</div>':'';
       var tr=n.transcript?'<div class="transcript" data-tr="'+n.id+'">'+escapeHtml(n.transcript)+'</div>':'';
@@ -817,9 +900,12 @@
         '<div class="note-top"><div class="note-title">'+title+'</div>'+
         '<div class="note-date">'+fmtDate(n.date)+'</div></div>'+
         sum+
-        '<audio controls src="'+n.audio+'"></audio>'+
+        '<audio controls src="'+n.audio+'" data-audio="'+n.id+'"></audio>'+
         tr+
         '<div class="note-foot">'+trBtn+
+          '<button class="link-btn speed-btn" data-speed="'+n.id+'">⏩ 1x</button>'+
+          '<button class="link-btn" data-pin="'+n.id+'">'+(n.pinned?"★ sabit":"☆ sabitle")+'</button>'+
+          '<button class="link-btn" data-edit="'+n.id+'">✎ düzenle</button>'+
           '<button class="link-btn" data-dl="'+n.id+'">↓ ses</button>'+
           '<button class="link-btn" data-txt="'+n.id+'">↓ metin</button>'+
           '<button class="link-btn" data-word="'+n.id+'">↓ word</button>'+
@@ -849,9 +935,16 @@
     var t=e.target;
     var del=t.getAttribute("data-del"), dl=t.getAttribute("data-dl"),
         txt=t.getAttribute("data-txt"), tog=t.getAttribute("data-toggle"),
-        word=t.getAttribute("data-word"), pdf=t.getAttribute("data-pdf");
+        word=t.getAttribute("data-word"), pdf=t.getAttribute("data-pdf"),
+        edit=t.getAttribute("data-edit"), pin=t.getAttribute("data-pin"), speed=t.getAttribute("data-speed");
     if(tog){ var el=document.querySelector('.transcript[data-tr="'+tog+'"]');
       if(el){ el.classList.toggle("open"); t.textContent=el.classList.contains("open")?"⤡ gizle":"⤢ tam metin"; } }
+    if(speed){ var au=document.querySelector('audio[data-audio="'+speed+'"]');
+      if(au){ var seq=[1,1.5,2], cur=au.playbackRate||1, ni=(seq.indexOf(cur)+1)%seq.length, nr=seq[ni];
+        au.playbackRate=nr; t.textContent="⏩ "+nr+"x"; } }
+    if(pin){ var np2=notes.find(function(n){return String(n.id)===pin;});
+      if(np2){ np2.pinned=!np2.pinned; saveNotes(notes); render(); toast(np2.pinned?"Sabitlendi ★":"Sabit kaldırıldı"); } }
+    if(edit){ var ne=notes.find(function(n){return String(n.id)===edit;}); if(ne) openEdit(ne); }
     if(del){ if(confirm("Bu notu silmek istediğine emin misin?")){
       notes=notes.filter(function(n){return String(n.id)!==del;}); saveNotes(notes); render(); toast("Not silindi"); } }
     if(dl){ var n1=notes.find(function(n){return String(n.id)===dl;});
@@ -863,6 +956,33 @@
         a2.download=(n2.title||"ses-notu")+".txt"; a2.click(); } }
     if(word){ var nw=notes.find(function(n){return String(n.id)===word;}); if(nw) exportWord(nw); }
     if(pdf){ var np=notes.find(function(n){return String(n.id)===pdf;}); if(np) exportPdf(np); }
+  });
+
+  /* ---------- not düzenle ---------- */
+  var editingId=null;
+  function openEdit(n){
+    editingId=n.id;
+    editTitle.value=n.title||"";
+    editSummary.value=n.summary||"";
+    editTranscript.value=n.transcript||"";
+    editModule.innerHTML="";
+    modules.forEach(function(m){ var o=document.createElement("option"); o.value=m; o.textContent=m; editModule.appendChild(o); });
+    editModule.value = modules.indexOf(noteModule(n))!==-1 ? noteModule(n) : modules[0];
+    editSheet.classList.add("show");
+  }
+  function closeEdit(){ editSheet.classList.remove("show"); editingId=null; }
+  editCancelBtn.addEventListener("click", closeEdit);
+  editSheet.addEventListener("click", function(e){ if(e.target===editSheet) closeEdit(); });
+  editSaveBtn.addEventListener("click", function(){
+    var n=notes.find(function(x){return x.id===editingId;});
+    if(n){
+      n.title=editTitle.value.trim();
+      n.summary=editSummary.value.trim();
+      n.transcript=editTranscript.value.trim();
+      n.module=editModule.value || modules[0];
+      saveNotes(notes); render(); toast("Not güncellendi ✓");
+    }
+    closeEdit();
   });
 
   /* ---------- Word / PDF dışa aktar ---------- */
@@ -895,21 +1015,49 @@
   }
 
   /* ---------- ayarlar paneli ---------- */
+  function applyTheme(){
+    document.documentElement.setAttribute("data-theme", settings.theme==="dark"?"dark":"light");
+  }
+  applyTheme();
+
   function openSettings(){
     aiToggle.checked=!!settings.aiOn;
     aiKeyInput.value=settings.aiKey||"";
+    themeToggle.checked=settings.theme==="dark";
     settingsSheet.classList.add("show");
   }
   function closeSettings(){ settingsSheet.classList.remove("show"); }
   settingsBtn.addEventListener("click", openSettings);
   settingsCloseBtn.addEventListener("click", closeSettings);
   settingsSheet.addEventListener("click", function(e){ if(e.target===settingsSheet) closeSettings(); });
+  themeToggle.addEventListener("change", function(){
+    settings.theme = themeToggle.checked ? "dark" : "light"; applyTheme(); saveSettings();
+  });
   settingsSaveBtn.addEventListener("click", function(){
     settings.aiOn=aiToggle.checked;
     settings.aiKey=aiKeyInput.value.trim();
-    saveSettings();
+    settings.theme=themeToggle.checked?"dark":"light";
+    saveSettings(); applyTheme();
     toast(settings.aiOn && settings.aiKey ? "Yapay zeka açık ✓" : "Ayarlar kaydedildi");
     closeSettings();
+  });
+
+  /* ---------- hazır ses dosyası yükle ---------- */
+  importBtn.addEventListener("click", function(){ fileInput.click(); });
+  fileInput.addEventListener("change", function(){
+    var f=fileInput.files && fileInput.files[0];
+    if(!f) return;
+    pendingBlob=f;
+    previewAudio.src=URL.createObjectURL(f);
+    finalText=""; gotAnyResult=false; lastRecogError="";
+    transcriptInput.value="";
+    summaryBox.textContent="(Yüklenen dosya otomatik yazıya çevrilemez — metni elle yaz ya da '✨ Yapay zeka ile özetle' için önce metni gir.)";
+    fillModuleSelect();
+    saveForm.classList.add("show");
+    hint.textContent="Dosya yüklendi — modülü seç, metni yaz, kaydet";
+    titleInput.value = f.name ? f.name.replace(/\.[^.]+$/,"") : "";
+    fileInput.value="";
+    saveForm.scrollIntoView({behavior:"smooth", block:"center"});
   });
 
   searchEl.addEventListener("input", render);
