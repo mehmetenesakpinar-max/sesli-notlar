@@ -171,20 +171,32 @@
   .btn:hover { transform: translateY(-2px); }
   .btn.ghost { background: transparent; color: var(--ink); }
 
-  /* modül sekmeleri (alt alta liste) */
-  .modbar {
-    display: flex; flex-direction: column; align-items: stretch;
-    gap: 8px; margin-bottom: 18px;
+  /* modüller — zihin haritası (alt alta dallanan) */
+  .modbar { display: block; margin-bottom: 22px; }
+  .mind-root {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px;
+    display: inline-block; background: var(--accent); color: #fff;
+    padding: 9px 18px; border-radius: 16px; margin-bottom: 2px;
+    box-shadow: 0 8px 18px -10px var(--accent-deep);
   }
-  .mod-tab {
+  .mind-branch {
+    display: flex; flex-direction: column; align-items: flex-start;
+    margin-left: 20px; padding-left: 22px; border-left: 2px solid var(--line);
+  }
+  .mind-branch .mod-tab {
+    position: relative; display: inline-block; margin: 7px 0;
     font-family: 'Spline Sans Mono', monospace; font-size: 13px; letter-spacing: 0.04em;
-    background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px;
-    padding: 11px 16px; color: var(--ink-soft); cursor: pointer;
-    text-align: left; transition: all .18s;
+    background: var(--paper); border: 1.5px solid var(--line); border-radius: 20px;
+    padding: 9px 16px; color: var(--ink-soft); cursor: pointer;
+    text-align: left; transition: all .18s; white-space: nowrap;
   }
-  .mod-tab:hover { border-color: var(--amber); color: var(--ink); }
-  .mod-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .mod-tab.add { border-style: dashed; color: var(--accent); text-align: center; }
+  .mind-branch .mod-tab::before {
+    content: ""; position: absolute; left: -22px; top: 50%;
+    width: 22px; height: 2px; background: var(--line);
+  }
+  .mind-branch .mod-tab:hover { border-color: var(--amber); color: var(--ink); }
+  .mind-branch .mod-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .mind-branch .mod-tab.add { border-style: dashed; color: var(--accent); }
 
   .list-head {
     display: flex; align-items: baseline; justify-content: space-between;
@@ -836,13 +848,21 @@
 
   function renderModbar(){
     modbar.innerHTML="";
+    var root=document.createElement("div");
+    root.className="mind-root"; root.textContent="📚 Derslerim";
+    modbar.appendChild(root);
+
+    var branch=document.createElement("div");
+    branch.className="mind-branch";
+    modbar.appendChild(branch);
+
     var tabs=[{v:"*",t:"Tümü"}].concat(modules.map(function(m){return {v:m,t:m};}));
     tabs.forEach(function(tab){
       var b=document.createElement("button");
       b.className="mod-tab"+(activeModule===tab.v?" active":"");
       b.textContent=tab.t;
       b.addEventListener("click", function(){ setActiveModule(tab.v); renderModbar(); render(); });
-      modbar.appendChild(b);
+      branch.appendChild(b);
     });
     var addb=document.createElement("button");
     addb.className="mod-tab add"; addb.textContent="＋ modül";
@@ -852,7 +872,7 @@
       if(modules.indexOf(name)!==-1){ toast("Bu modül zaten var"); return; }
       modules.push(name); saveModules(); setActiveModule(name); renderModbar(); render();
     });
-    modbar.appendChild(addb);
+    branch.appendChild(addb);
   }
 
   /* ---------- kaydet ---------- */
