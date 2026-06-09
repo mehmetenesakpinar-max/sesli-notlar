@@ -337,6 +337,50 @@
   .pin-flag { color: var(--amber); margin-right:4px; }
   .speed-btn { color: var(--accent-deep); }
 
+  /* sohbet & bilgi panelleri */
+  .chat-msgs { display:flex; flex-direction:column; gap:10px; max-height:46vh; overflow-y:auto; margin:12px 0; }
+  .bubble { padding:10px 13px; border-radius:14px; font-size:15px; line-height:1.5; max-width:88%; white-space:pre-wrap; }
+  .bubble.me { align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
+  .bubble.ai { align-self:flex-start; background:#fbf3e3; border:1.5px solid var(--line); color:var(--ink); border-bottom-left-radius:4px; }
+  html[data-theme="dark"] .bubble.ai { background:#332a20; }
+  .chat-input-row { display:flex; gap:8px; }
+  .chat-input-row input {
+    flex:1; font-family:'Newsreader',serif; font-size:15px; background:#fffdf8;
+    border:1.5px solid var(--line); border-radius:12px; padding:11px 13px; color:var(--ink);
+  }
+  html[data-theme="dark"] .chat-input-row input { background:#1f1a14; }
+  .chat-input-row button {
+    border:none; background:var(--accent); color:#fff; border-radius:12px; padding:0 16px;
+    font-size:18px; cursor:pointer;
+  }
+  .info-body { font-size:15px; line-height:1.6; white-space:pre-wrap; margin:10px 0 4px; max-height:55vh; overflow-y:auto; }
+
+  /* tahta fotoğrafı */
+  .note-thumb { margin-top:10px; }
+  .note-thumb img { max-width:100%; border-radius:10px; border:1.5px solid var(--line); display:block; cursor:pointer; }
+  .photo-preview { max-width:100%; border-radius:10px; margin-top:6px; border:1.5px solid var(--line); }
+  .img-viewer {
+    position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1300; display:none;
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .img-viewer.show { display:flex; }
+  .img-viewer img { max-width:100%; max-height:100%; border-radius:8px; }
+
+  /* sıralama */
+  .sort-sel {
+    font-family:'Spline Sans Mono',monospace; font-size:12px; background:transparent;
+    border:none; border-bottom:1.5px solid var(--line); padding:6px 4px; color:var(--ink); cursor:pointer;
+  }
+  .sort-sel:focus { outline:none; border-color:var(--accent); }
+
+  .tools-row { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .tool-btn {
+    font-family:'Spline Sans Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    background:var(--paper); border:1.5px solid var(--line); border-radius:10px; padding:9px 13px;
+    color:var(--ink-soft); cursor:pointer; transition:all .2s;
+  }
+  .tool-btn:hover { border-color:var(--accent); color:var(--accent); }
+
   footer { text-align: center; margin-top: 40px; color: var(--ink-soft); font-size: 13px; font-style: italic; }
 </style>
 </head>
@@ -387,6 +431,11 @@
       <span class="field-label">Başlık (isteğe bağlı)</span>
       <input type="text" id="titleInput" placeholder="Başlık" maxlength="80">
 
+      <span class="field-label">Tahta fotoğrafı (isteğe bağlı)</span>
+      <button class="import-btn" id="photoBtn" type="button">📷 Fotoğraf ekle</button>
+      <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+      <img class="photo-preview" id="photoPreview" style="display:none;" alt="">
+
       <div class="form-actions">
         <button class="btn ghost" id="discardBtn">Sil</button>
         <button class="btn" id="saveBtn">Kaydet</button>
@@ -396,8 +445,18 @@
 
   <div class="modbar" id="modbar"></div>
 
+  <div class="tools-row">
+    <button class="tool-btn" id="chatBtn" type="button">💬 Notlarımla sohbet</button>
+  </div>
+
   <div class="list-head">
     <h2 id="count">Notların</h2>
+    <select class="sort-sel" id="sortSel">
+      <option value="date_desc">Yeni → Eski</option>
+      <option value="date_asc">Eski → Yeni</option>
+      <option value="title">Başlığa göre</option>
+      <option value="module">Modüle göre</option>
+    </select>
     <input type="text" class="search" id="search" placeholder="ara...">
   </div>
   <div id="notes"></div>
@@ -444,6 +503,15 @@
     <textarea id="fbConfigInput" rows="7" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", ... };' style="width:100%;font-family:Spline Sans Mono,monospace;font-size:12px;background:#fffdf8;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--ink);"></textarea>
     <p class="small" id="cloudStatus">Bağlı değil. Kurulum adımları için aşağıdaki Kaydet'e bastıktan sonra yönergeleri izle.</p>
 
+    <hr style="border:none;border-top:1.5px solid var(--line);margin:18px 0;">
+    <h3 style="font-size:18px;">💾 Yedekle / Geri yükle</h3>
+    <p class="note-txt">Tüm notların metnini tek dosyaya indir, başka cihazda geri yükle. (Ses ve fotoğraflar dosyaya dahil değildir, her cihazda yereldir.)</p>
+    <div class="form-actions" style="margin-top:0;">
+      <button class="btn ghost" id="backupBtn" type="button">⬇️ Yedekle</button>
+      <button class="btn ghost" id="restoreBtn" type="button">⬆️ Geri yükle</button>
+      <input type="file" id="restoreInput" accept="application/json,.json" hidden>
+    </div>
+
     <div class="form-actions">
       <button class="btn ghost" id="settingsCloseBtn">Kapat</button>
       <button class="btn" id="settingsSaveBtn">Kaydet</button>
@@ -474,6 +542,36 @@
     </div>
   </div>
 </div>
+
+<!-- notlarla sohbet -->
+<div class="sheet" id="chatSheet">
+  <div class="sheet-card">
+    <h3>💬 Notlarımla sohbet</h3>
+    <p class="note-txt" id="chatScope">Aktif modüldeki notlara soru sor.</p>
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Soru yaz...">
+      <button id="chatSendBtn" type="button">➤</button>
+    </div>
+    <div class="form-actions">
+      <button class="btn ghost" id="chatCloseBtn">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- bilgi paneli (anahtar terimler vb.) -->
+<div class="sheet" id="infoSheet">
+  <div class="sheet-card">
+    <h3 id="infoTitle">Bilgi</h3>
+    <div class="info-body" id="infoBody"></div>
+    <div class="form-actions">
+      <button class="btn ghost" id="infoCloseBtn">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- fotoğraf büyüt -->
+<div class="img-viewer" id="imgViewer"><img id="imgViewerImg" alt=""></div>
 
 <script>
 (function () {
@@ -609,11 +707,19 @@
       editSheet=$("editSheet"), editTitle=$("editTitle"), editModule=$("editModule"),
       editSummary=$("editSummary"), editTranscript=$("editTranscript"),
       editSaveBtn=$("editSaveBtn"), editCancelBtn=$("editCancelBtn"),
-      cloudToggle=$("cloudToggle"), fbConfigInput=$("fbConfigInput"), cloudStatus=$("cloudStatus");
+      cloudToggle=$("cloudToggle"), fbConfigInput=$("fbConfigInput"), cloudStatus=$("cloudStatus"),
+      photoBtn=$("photoBtn"), photoInput=$("photoInput"), photoPreview=$("photoPreview"),
+      chatBtn=$("chatBtn"), sortSel=$("sortSel"),
+      chatSheet=$("chatSheet"), chatMsgs=$("chatMsgs"), chatInput=$("chatInput"),
+      chatSendBtn=$("chatSendBtn"), chatCloseBtn=$("chatCloseBtn"), chatScope=$("chatScope"),
+      infoSheet=$("infoSheet"), infoTitle=$("infoTitle"), infoBody=$("infoBody"), infoCloseBtn=$("infoCloseBtn"),
+      imgViewer=$("imgViewer"), imgViewerImg=$("imgViewerImg"),
+      backupBtn=$("backupBtn"), restoreBtn=$("restoreBtn"), restoreInput=$("restoreInput");
 
   var mediaRecorder=null, chunks=[], stream=null;
   var audioCtx=null, analyser=null, rafId=null, dataArr=null;
-  var startTime=0, elapsedBefore=0, timerId=null, pendingBlob=null, recording=false, paused=false;
+  var startTime=0, elapsedBefore=0, timerId=null, pendingBlob=null, pendingImage=null, recording=false, paused=false;
+  var sortMode = loadJSON("sesli_sira","date_desc");
   var recog=null, finalText="", recogActive=false, wantRecog=false;
   var gotAnyResult=false, lastRecogError="";
 
@@ -726,6 +832,7 @@
       pauseBtn.hidden=false; pauseBtn.textContent="⏸"; pauseBtn.classList.remove("resume");
       hint.textContent="Kaydediliyor & yazıya çevriliyor... bitirmek için kırmızıya, durdurmak için ⏸";
       transcriptInput.value=""; summaryBox.textContent="Konuşuluyor...";
+      pendingImage=null; photoPreview.src=""; photoPreview.style.display="none"; photoBtn.textContent="📷 Fotoğraf ekle";
       fillModuleSelect();
       saveForm.classList.add("show"); liveBox.classList.add("show");
       elapsedBefore=0; startTime=Date.now(); timerId=setInterval(tick,100);
@@ -852,11 +959,9 @@
   }
 
   /* ---------- yapay zeka özetleme (isteğe bağlı, kullanıcının anahtarı) ---------- */
-  function summarizeAI(text){
+  function callClaude(messages, maxTokens){
     var key=(settings.aiKey||"").trim();
-    if(!settings.aiOn || !key){
-      return Promise.reject(new Error("AI kapalı veya anahtar yok"));
-    }
+    if(!settings.aiOn || !key) return Promise.reject(new Error("AI kapalı veya anahtar yok"));
     return fetch("https://api.anthropic.com/v1/messages", {
       method:"POST",
       headers:{
@@ -865,12 +970,7 @@
         "anthropic-version":"2023-06-01",
         "anthropic-dangerous-direct-browser-access":"true"
       },
-      body: JSON.stringify({
-        model:"claude-haiku-4-5-20251001",
-        max_tokens:400,
-        messages:[{role:"user", content:
-          "Aşağıdaki ders/konuşma notunu Türkçe olarak kısa ve madde madde özetle. Sadece özeti yaz, başka bir şey ekleme:\n\n"+text }]
-      })
+      body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:maxTokens||400, messages:messages })
     }).then(function(r){
       if(!r.ok){ return r.text().then(function(t){ throw new Error("API "+r.status+": "+t.slice(0,160)); }); }
       return r.json();
@@ -879,6 +979,12 @@
       if(!out) throw new Error("Boş yanıt");
       return out;
     });
+  }
+  function aiReady(){ return settings.aiOn && (settings.aiKey||"").trim(); }
+
+  function summarizeAI(text){
+    return callClaude([{role:"user", content:
+      "Aşağıdaki ders/konuşma notunu Türkçe olarak kısa ve madde madde özetle. Sadece özeti yaz, başka bir şey ekleme:\n\n"+text }], 400);
   }
 
   aiBtn.addEventListener("click", function(){
@@ -964,9 +1070,12 @@
         module:mod,
         date:new Date().toISOString()
       };
-      notes.unshift(newNote);
-      saveNotes(notes); render(); resetForm(); toast("Not kaydedildi ✓ ("+mod+")");
-      cloudPushNote(newNote);
+      var imgP = pendingImage ? idbPut("img_"+id, pendingImage).then(function(){ newNote.hasImage=true; }).catch(function(){}) : Promise.resolve();
+      imgP.then(function(){
+        notes.unshift(newNote);
+        saveNotes(notes); render(); resetForm(); toast("Not kaydedildi ✓ ("+mod+")");
+        cloudPushNote(newNote);
+      });
     }).catch(function(e){
       console.error(e);
       toast("Kaydedilemedi: cihaz hafızası yetersiz olabilir ("+(e.message||"hata")+")");
@@ -975,7 +1084,8 @@
   discardBtn.addEventListener("click", function(){ resetForm(); toast("Kayıt silindi"); });
 
   function resetForm(){
-    saveForm.classList.remove("show"); pendingBlob=null; previewAudio.src="";
+    saveForm.classList.remove("show"); pendingBlob=null; pendingImage=null; previewAudio.src="";
+    photoPreview.src=""; photoPreview.style.display="none"; photoBtn.textContent="📷 Fotoğraf ekle";
     transcriptInput.value=""; summaryBox.textContent="—";
     timerEl.innerHTML="00:00<span class='ms'>.0</span>";
     hint.textContent="Kaydı başlatmak için kırmızı düğmeye dokun";
@@ -998,12 +1108,8 @@
     var label = activeModule==="*" ? "Tüm notlar" : activeModule;
     countEl.textContent = label + (inMod.length?(" ("+inMod.length+")"):"");
 
-    // sabitlenenler üstte
-    filtered = filtered.slice().sort(function(a,b){
-      var pa=a.pinned?1:0, pb=b.pinned?1:0;
-      if(pa!==pb) return pb-pa;
-      return 0;
-    });
+    // sıralama (sabitlenenler üstte)
+    filtered = applySort(filtered);
 
     // modül silme bağlantısı
     var existingDel=document.getElementById("modDelBtn");
@@ -1031,14 +1137,18 @@
       var sum=n.summary?'<div class="sum">📝 '+escapeHtml(n.summary)+'</div>':'';
       var tr=n.transcript?'<div class="transcript" data-tr="'+n.id+'">'+escapeHtml(n.transcript)+'</div>':'';
       var trBtn=n.transcript?'<button class="link-btn" data-toggle="'+n.id+'">⤢ tam metin</button>':'';
+      var thumb=n.hasImage?'<div class="note-thumb" data-thumb="'+n.id+'"></div>':'';
       div.innerHTML=
         badge+
         '<div class="note-top"><div class="note-title">'+title+'</div>'+
         '<div class="note-date">'+fmtDate(n.date)+'</div></div>'+
         sum+
         '<audio controls data-audio="'+n.id+'"'+(n.audio?' src="'+n.audio+'"':'')+'></audio>'+
+        thumb+
         tr+
         '<div class="note-foot">'+trBtn+
+          '<button class="link-btn" data-terms="'+n.id+'">🔑 terimler</button>'+
+          '<button class="link-btn" data-photo="'+n.id+'">📷 foto</button>'+
           '<button class="link-btn speed-btn" data-speed="'+n.id+'">⏩ 1x</button>'+
           '<button class="link-btn" data-pin="'+n.id+'">'+(n.pinned?"★ sabit":"☆ sabitle")+'</button>'+
           '<button class="link-btn" data-edit="'+n.id+'">✎ düzenle</button>'+
@@ -1069,6 +1179,19 @@
         }
       }).catch(function(){});
     });
+
+    // tahta fotoğraflarını yükle
+    filtered.forEach(function(n){
+      if(!n.hasImage) return;
+      idbGet("img_"+n.id).then(function(blob){
+        var holder=notesEl.querySelector('[data-thumb="'+n.id+'"]');
+        if(!holder||!blob) return;
+        var url=URL.createObjectURL(blob); window._audioUrls.push(url);
+        var img=document.createElement("img"); img.src=url; img.alt="tahta fotoğrafı";
+        img.addEventListener("click", function(){ showImg(url); });
+        holder.appendChild(img);
+      }).catch(function(){});
+    });
   }
 
   function deleteActiveModule(){
@@ -1091,7 +1214,20 @@
     var del=t.getAttribute("data-del"), dl=t.getAttribute("data-dl"),
         txt=t.getAttribute("data-txt"), tog=t.getAttribute("data-toggle"),
         word=t.getAttribute("data-word"), pdf=t.getAttribute("data-pdf"),
-        edit=t.getAttribute("data-edit"), pin=t.getAttribute("data-pin"), speed=t.getAttribute("data-speed");
+        edit=t.getAttribute("data-edit"), pin=t.getAttribute("data-pin"), speed=t.getAttribute("data-speed"),
+        terms=t.getAttribute("data-terms"), photo=t.getAttribute("data-photo");
+    if(terms){ var nt=notes.find(function(n){return String(n.id)===terms;}); if(nt) keyTerms(nt); }
+    if(photo){
+      var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*";
+      inp.onchange=function(){
+        var f=inp.files&&inp.files[0]; if(!f) return;
+        idbPut("img_"+photo, f).then(function(){
+          var nn=notes.find(function(x){return String(x.id)===photo;});
+          if(nn){ nn.hasImage=true; saveNotes(notes); render(); cloudPushNote(nn); toast("Fotoğraf eklendi"); }
+        }).catch(function(){ toast("Fotoğraf eklenemedi"); });
+      };
+      inp.click();
+    }
     if(tog){ var el=document.querySelector('.transcript[data-tr="'+tog+'"]');
       if(el){ el.classList.toggle("open"); t.textContent=el.classList.contains("open")?"⤡ gizle":"⤢ tam metin"; } }
     if(speed){ var au=document.querySelector('audio[data-audio="'+speed+'"]');
@@ -1101,7 +1237,7 @@
       if(np2){ np2.pinned=!np2.pinned; saveNotes(notes); render(); cloudPushNote(np2); toast(np2.pinned?"Sabitlendi ★":"Sabit kaldırıldı"); } }
     if(edit){ var ne=notes.find(function(n){return String(n.id)===edit;}); if(ne) openEdit(ne); }
     if(del){ if(confirm("Bu notu silmek istediğine emin misin?")){
-      idbDel(del); cloudDeleteNote(del);
+      idbDel(del); idbDel("img_"+del); cloudDeleteNote(del);
       notes=notes.filter(function(n){return String(n.id)!==del;}); saveNotes(notes); render(); toast("Not silindi"); } }
     if(dl){ var n1=notes.find(function(n){return String(n.id)===dl;});
       if(n1){
@@ -1228,6 +1364,7 @@
     pendingBlob=f;
     previewAudio.src=URL.createObjectURL(f);
     finalText=""; gotAnyResult=false; lastRecogError="";
+    pendingImage=null; photoPreview.src=""; photoPreview.style.display="none"; photoBtn.textContent="📷 Fotoğraf ekle";
     transcriptInput.value="";
     summaryBox.textContent="(Yüklenen dosya otomatik yazıya çevrilemez — metni elle yaz ya da '✨ Yapay zeka ile özetle' için önce metni gir.)";
     fillModuleSelect();
@@ -1239,6 +1376,145 @@
   });
 
   searchEl.addEventListener("input", render);
+
+  /* ---------- tahta fotoğrafı ---------- */
+  photoBtn.addEventListener("click", function(){ photoInput.click(); });
+  photoInput.addEventListener("change", function(){
+    var f=photoInput.files && photoInput.files[0];
+    if(!f) return;
+    pendingImage=f;
+    photoPreview.src=URL.createObjectURL(f);
+    photoPreview.style.display="block";
+    photoBtn.textContent="📷 Fotoğrafı değiştir";
+    photoInput.value="";
+  });
+
+  /* ---------- sıralama ---------- */
+  if(sortSel) sortSel.value=sortMode;
+  sortSel.addEventListener("change", function(){
+    sortMode=sortSel.value; saveJSON("sesli_sira", sortMode); render();
+  });
+  function applySort(arr){
+    var a=arr.slice();
+    if(sortMode==="date_asc") a.sort(function(x,y){return String(x.date||"").localeCompare(String(y.date||""));});
+    else if(sortMode==="title") a.sort(function(x,y){return (x.title||"Adsız").localeCompare(y.title||"Adsız","tr");});
+    else if(sortMode==="module") a.sort(function(x,y){return noteModule(x).localeCompare(noteModule(y),"tr");});
+    else a.sort(function(x,y){return String(y.date||"").localeCompare(String(x.date||""));}); // date_desc
+    // sabitlenenler her zaman üstte
+    a.sort(function(x,y){return (y.pinned?1:0)-(x.pinned?1:0);});
+    return a;
+  }
+
+  /* ---------- bilgi paneli ---------- */
+  function showInfo(title, body){
+    infoTitle.textContent=title; infoBody.textContent=body; infoSheet.classList.add("show");
+  }
+  infoCloseBtn.addEventListener("click", function(){ infoSheet.classList.remove("show"); });
+  infoSheet.addEventListener("click", function(e){ if(e.target===infoSheet) infoSheet.classList.remove("show"); });
+
+  /* ---------- anahtar terimler ---------- */
+  function localTerms(text){
+    var freq={};
+    text.toLowerCase().replace(/[^a-zçğıöşü0-9\s]/g," ").split(/\s+/).forEach(function(w){
+      if(w.length<4||STOPSET[w])return; freq[w]=(freq[w]||0)+1;
+    });
+    var arr=Object.keys(freq).map(function(k){return [k,freq[k]];}).sort(function(a,b){return b[1]-a[1];});
+    return arr.slice(0,12).map(function(p){return "• "+p[0]+" ("+p[1]+")";}).join("\n");
+  }
+  function keyTerms(n){
+    var text=(n.transcript||n.summary||"").trim();
+    if(!text){ toast("Bu notta metin yok"); return; }
+    if(aiReady()){
+      showInfo("🔑 Anahtar terimler", "Yapay zeka çıkarıyor...");
+      callClaude([{role:"user", content:"Aşağıdaki ders notundaki en önemli anahtar terim ve kavramları Türkçe, kısa açıklamalarıyla madde madde listele:\n\n"+text}], 500)
+        .then(function(out){ showInfo("🔑 Anahtar terimler", out); })
+        .catch(function(e){ showInfo("🔑 Anahtar terimler (yerel)", localTerms(text)); toast("AI başarısız, yerel liste"); });
+    } else {
+      showInfo("🔑 Sık geçen terimler", localTerms(text)+"\n\n(Daha akıllı liste için ⚙ Ayarlar'dan yapay zekayı aç.)");
+    }
+  }
+
+  /* ---------- notlarla sohbet ---------- */
+  var chatHistory=[];
+  function notesContext(){
+    var scope = notes.filter(function(n){ return activeModule==="*" || noteModule(n)===activeModule; });
+    var parts = scope.map(function(n){
+      return "### "+(n.title||"Adsız not")+" ["+noteModule(n)+"]\nÖzet: "+(n.summary||"-")+"\nMetin: "+(n.transcript||"-");
+    });
+    var ctx = parts.join("\n\n");
+    if(ctx.length>14000) ctx = ctx.slice(0,14000)+"\n...(kısaltıldı)";
+    return ctx;
+  }
+  function openChat(){
+    chatScope.textContent = (activeModule==="*"?"Tüm notlara":("'"+activeModule+"' modülündeki notlara"))+" soru sor.";
+    if(!chatHistory.length){
+      chatMsgs.innerHTML='<div class="bubble ai">Merhaba! Notlarına dair ne sormak istersin? Örn: "Bu derste X nasıl açıklandı?"</div>';
+    }
+    chatSheet.classList.add("show");
+    setTimeout(function(){ chatInput.focus(); }, 100);
+  }
+  function addBubble(cls, text){
+    var b=document.createElement("div"); b.className="bubble "+cls; b.textContent=text;
+    chatMsgs.appendChild(b); chatMsgs.scrollTop=chatMsgs.scrollHeight; return b;
+  }
+  function sendChat(){
+    var q=chatInput.value.trim(); if(!q) return;
+    if(!aiReady()){ toast("⚙ Ayarlar'dan yapay zekayı aç ve anahtar gir"); chatSheet.classList.remove("show"); openSettings(); return; }
+    chatInput.value=""; addBubble("me", q);
+    var thinking=addBubble("ai","…");
+    var sys="Sen kullanıcının ders notları üzerinden soru yanıtlayan bir asistansın. SADECE aşağıdaki notlara dayanarak Türkçe cevap ver. Cevap notlarda yoksa bunu dürüstçe söyle.\n\n=== NOTLAR ===\n"+notesContext();
+    chatHistory.push({role:"user", content:q});
+    var msgs=[{role:"user", content:sys+"\n\n=== SORU ===\n"+q}];
+    callClaude(msgs, 700).then(function(out){
+      thinking.textContent=out; chatHistory.push({role:"assistant", content:out});
+      chatMsgs.scrollTop=chatMsgs.scrollHeight;
+    }).catch(function(e){
+      thinking.textContent="Hata: "+(e.message||"yanıt alınamadı").slice(0,80);
+    });
+  }
+  chatBtn.addEventListener("click", openChat);
+  chatSendBtn.addEventListener("click", sendChat);
+  chatInput.addEventListener("keydown", function(e){ if(e.key==="Enter") sendChat(); });
+  chatCloseBtn.addEventListener("click", function(){ chatSheet.classList.remove("show"); });
+  chatSheet.addEventListener("click", function(e){ if(e.target===chatSheet) chatSheet.classList.remove("show"); });
+
+  /* ---------- fotoğraf büyüt ---------- */
+  function showImg(url){ imgViewerImg.src=url; imgViewer.classList.add("show"); }
+  imgViewer.addEventListener("click", function(){ imgViewer.classList.remove("show"); imgViewerImg.src=""; });
+
+  /* ---------- yedekle / geri yükle ---------- */
+  backupBtn.addEventListener("click", function(){
+    var data={ v:1, tarih:new Date().toISOString(), modules:modules,
+      notes:notes.map(function(n){ return {
+        id:n.id, title:n.title||"", transcript:n.transcript||"", summary:n.summary||"",
+        module:noteModule(n), date:n.date, pinned:!!n.pinned }; }) };
+    var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download="sesli-notlar-yedek-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("Yedek indirildi ("+data.notes.length+" not)");
+  });
+  restoreBtn.addEventListener("click", function(){ restoreInput.click(); });
+  restoreInput.addEventListener("change", function(){
+    var f=restoreInput.files && restoreInput.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var data=JSON.parse(r.result);
+        if(!data || !Array.isArray(data.notes)) throw new Error("Geçersiz dosya");
+        if(!confirm("Yedekteki "+data.notes.length+" not mevcutlarla birleştirilecek. Devam?")) { restoreInput.value=""; return; }
+        if(Array.isArray(data.modules)) data.modules.forEach(function(m){ if(modules.indexOf(m)===-1) modules.push(m); });
+        var byId={}; notes.forEach(function(n){ byId[String(n.id)]=true; });
+        data.notes.forEach(function(n){
+          if(!byId[String(n.id)]){ notes.unshift(n); cloudPushNote(n); }
+        });
+        saveModules(); cloudPushModules(); saveNotes(notes); renderModbar(); fillModuleSelect(); render();
+        toast("Geri yüklendi ✓");
+      }catch(e){ toast("Geri yükleme hatası: "+(e.message||"")); }
+      restoreInput.value="";
+    };
+    r.readAsText(f);
+  });
 
   /* ---------- başlat ---------- */
   renderModbar();
