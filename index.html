@@ -48,7 +48,7 @@
   }
   .wrap { max-width: 720px; margin: 0 auto; padding: 44px 20px 120px; }
 
-  header { text-align: center; margin-bottom: 32px; }
+  header { text-align: center; margin-bottom: 32px; position: relative; }
   .kicker {
     font-family: 'Spline Sans Mono', monospace;
     font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
@@ -60,6 +60,12 @@
   }
   h1 em { font-style: italic; font-weight: 500; color: var(--accent); }
   .tag { font-style: italic; color: var(--ink-soft); margin-top: 10px; font-size: 17px; }
+  .settings-btn {
+    position: absolute; top: 0; right: 0; width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid var(--line); background: var(--paper); cursor: pointer;
+    font-size: 18px; line-height: 1; color: var(--ink-soft); transition: transform .15s, border-color .2s;
+  }
+  .settings-btn:hover { transform: rotate(40deg); border-color: var(--accent); color: var(--accent); }
 
   .recorder {
     background: var(--paper); border: 1.5px solid var(--line); border-radius: 20px;
@@ -76,6 +82,7 @@
     text-align: center; letter-spacing: 0.02em; color: var(--ink); transition: color .3s;
   }
   .timer.live { color: var(--accent); }
+  .timer.paused { color: var(--amber); }
   .timer .ms { font-size: 21px; opacity: 0.45; }
 
   canvas#wave { width: 100%; height: 64px; display: block; margin: 4px 0 14px; }
@@ -99,6 +106,16 @@
     0%,100% { box-shadow: 0 0 0 6px rgba(196,69,45,0.18), 0 10px 22px -8px var(--accent-deep); }
     50% { box-shadow: 0 0 0 14px rgba(196,69,45,0.05), 0 10px 22px -8px var(--accent-deep); }
   }
+  .pause-btn {
+    width: 58px; height: 58px; border-radius: 50%; border: 1.5px solid var(--ink);
+    background: transparent; color: var(--ink); cursor: pointer; flex: none;
+    font-size: 20px; line-height: 1; transition: transform .15s, background .2s, color .2s;
+  }
+  .pause-btn:hover { transform: scale(1.06); }
+  .pause-btn:active { transform: scale(0.95); }
+  .pause-btn[hidden] { display: none; }
+  .pause-btn.resume { background: var(--amber); border-color: var(--amber); color: #fff; }
+
   .hint {
     text-align: center; margin-top: 14px; color: var(--ink-soft);
     font-size: 15px; font-style: italic; min-height: 22px;
@@ -124,19 +141,26 @@
     font-family:'Spline Sans Mono',monospace; font-size:10px; letter-spacing:0.18em;
     text-transform:uppercase; color: var(--ink-soft); display:block; margin:14px 0 6px;
   }
-  .save-form input, .save-form textarea {
+  .save-form input, .save-form textarea, .save-form select {
     width: 100%; font-family: 'Newsreader', serif; font-size: 16px;
     background: #fffdf8; border: 1.5px solid var(--line); border-radius: 12px;
     padding: 12px 14px; color: var(--ink); resize: vertical; line-height: 1.5;
   }
-  .save-form input:focus, .save-form textarea:focus { outline: none; border-color: var(--amber); }
+  .save-form input:focus, .save-form textarea:focus, .save-form select:focus { outline: none; border-color: var(--amber); }
   .save-form input::placeholder, .save-form textarea::placeholder { color: #b3a48f; font-style: italic; }
   .preview-audio { width: 100%; margin: 4px 0 0; border-radius: 10px; }
   .summary-box {
     background: linear-gradient(180deg,#fbf3e3,#f7eedd); border: 1.5px solid var(--amber);
     border-radius: 12px; padding: 14px 16px; font-size: 16px; line-height: 1.55;
-    color: var(--ink); font-style: italic;
+    color: var(--ink); white-space: pre-wrap;
   }
+  .ai-btn {
+    margin-top: 8px; font-family:'Spline Sans Mono',monospace; font-size: 11px; letter-spacing:0.1em;
+    text-transform: uppercase; background: transparent; border: 1.5px solid var(--amber);
+    color: var(--accent-deep); border-radius: 9px; padding: 8px 12px; cursor: pointer; transition: background .2s;
+  }
+  .ai-btn:hover { background: #f7eedd; }
+  .ai-btn:disabled { opacity: .5; cursor: default; }
   .form-actions { display: flex; gap: 10px; margin-top: 16px; }
   .btn {
     font-family: 'Spline Sans Mono', monospace; font-size: 12px; letter-spacing: 0.12em;
@@ -146,6 +170,21 @@
   }
   .btn:hover { transform: translateY(-2px); }
   .btn.ghost { background: transparent; color: var(--ink); }
+
+  /* modül sekmeleri */
+  .modbar {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 18px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+  }
+  .mod-tab {
+    flex: none; font-family: 'Spline Sans Mono', monospace; font-size: 12px; letter-spacing: 0.05em;
+    background: var(--paper); border: 1.5px solid var(--line); border-radius: 20px;
+    padding: 8px 14px; color: var(--ink-soft); cursor: pointer; white-space: nowrap;
+    transition: all .18s;
+  }
+  .mod-tab:hover { border-color: var(--amber); color: var(--ink); }
+  .mod-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .mod-tab.add { border-style: dashed; color: var(--accent); }
 
   .list-head {
     display: flex; align-items: baseline; justify-content: space-between;
@@ -158,6 +197,12 @@
     padding: 6px 4px; color: var(--ink); min-width: 150px;
   }
   .search:focus { outline: none; border-color: var(--accent); }
+  .mod-del {
+    background: none; border: none; cursor: pointer; font-family:'Spline Sans Mono',monospace;
+    font-size: 11px; letter-spacing:0.08em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid transparent;
+  }
+  .mod-del:hover { color: var(--accent); border-color: var(--accent); }
 
   .note {
     background: var(--paper); border: 1.5px solid var(--line); border-radius: 16px;
@@ -170,16 +215,22 @@
     font-family: 'Spline Sans Mono', monospace; font-size: 10.5px;
     letter-spacing: 0.08em; color: var(--ink-soft); white-space: nowrap; padding-top: 4px;
   }
+  .note-badge {
+    display: inline-block; font-family:'Spline Sans Mono',monospace; font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-deep);
+    background: #f3e7d4; border: 1px solid var(--line); border-radius: 12px;
+    padding: 3px 9px; margin-bottom: 8px;
+  }
   .note .sum {
     background: #fbf3e3; border-left: 3px solid var(--amber); border-radius: 6px;
-    padding: 10px 12px; margin: 12px 0; font-style: italic; color: var(--ink); font-size: 15.5px; line-height:1.5;
+    padding: 10px 12px; margin: 12px 0; color: var(--ink); font-size: 15.5px; line-height:1.5; white-space: pre-wrap;
   }
   .note audio { width: 100%; height: 40px; border-radius: 8px; margin-top: 4px; }
   .note .transcript {
     margin-top: 10px; color: var(--ink-soft); font-size: 15px; line-height: 1.55;
     max-height: 0; overflow: hidden; transition: max-height .35s ease; white-space: pre-wrap;
   }
-  .note .transcript.open { max-height: 600px; }
+  .note .transcript.open { max-height: 1200px; }
   .note-foot { display: flex; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
   .link-btn {
     background: none; border: none; cursor: pointer; padding: 0;
@@ -209,12 +260,37 @@
   }
   .warn.show { display: block; }
 
+  /* ayarlar paneli */
+  .sheet {
+    position: fixed; inset: 0; background: rgba(42,31,23,0.45); z-index: 1100;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .sheet.show { display: flex; }
+  .sheet-card {
+    background: var(--paper); border: 1.5px solid var(--line); border-radius: 18px;
+    padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 20px 50px -20px var(--shadow);
+    animation: rise .3s ease both; max-height: 88vh; overflow-y: auto;
+  }
+  .sheet-card h3 { font-family:'Fraunces',serif; font-size: 22px; margin-bottom: 6px; }
+  .sheet-card p.note-txt { font-size: 14px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 14px; }
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+  .toggle-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .toggle-row label { font-size: 15px; }
+  .sheet-card input[type="password"], .sheet-card input[type="text"] {
+    width: 100%; font-family: 'Spline Sans Mono', monospace; font-size: 13px;
+    background: #fffdf8; border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 11px 13px; color: var(--ink); margin-bottom: 6px;
+  }
+  .sheet-card .small { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+  .sheet-card .small a { color: var(--accent); }
+
   footer { text-align: center; margin-top: 40px; color: var(--ink-soft); font-size: 13px; font-style: italic; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
+    <button class="settings-btn" id="settingsBtn" aria-label="Ayarlar" title="Ayarlar">⚙</button>
     <div class="kicker">Diktafon · Defter · Özet</div>
     <h1>Sesli <em>Notlar</em></h1>
     <p class="tag">Konuş — yazıya dönüşsün, özeti çıksın.</p>
@@ -226,6 +302,7 @@
     <div class="timer" id="timer">00:00<span class="ms">.0</span></div>
     <canvas id="wave"></canvas>
     <div class="controls">
+      <button class="pause-btn" id="pauseBtn" aria-label="Duraklat" hidden>⏸</button>
       <button class="rec-btn" id="recBtn" aria-label="Kaydet"><span class="dot"></span></button>
     </div>
     <div class="hint" id="hint">Kaydı başlatmak için kırmızı düğmeye dokun</div>
@@ -239,11 +316,15 @@
       <span class="field-label">Kayıt</span>
       <audio class="preview-audio" id="previewAudio" controls></audio>
 
+      <span class="field-label">Modül / Ders</span>
+      <select id="moduleSelect"></select>
+
       <span class="field-label">Özet</span>
       <div class="summary-box" id="summaryBox">—</div>
+      <button class="ai-btn" id="aiBtn" type="button">✨ Yapay zeka ile özetle</button>
 
       <span class="field-label">Metin (düzenleyebilirsin)</span>
-      <textarea id="transcriptInput" rows="4" placeholder="Konuşma buraya yazıya çevrildi..."></textarea>
+      <textarea id="transcriptInput" rows="4" placeholder="Konuşma buraya yazıya çevrilecek..."></textarea>
 
       <span class="field-label">Başlık (isteğe bağlı)</span>
       <input type="text" id="titleInput" placeholder="Başlık" maxlength="80">
@@ -254,6 +335,8 @@
       </div>
     </div>
   </section>
+
+  <div class="modbar" id="modbar"></div>
 
   <div class="list-head">
     <h2 id="count">Notların</h2>
@@ -266,48 +349,89 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ayarlar -->
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-card">
+    <h3>Ayarlar</h3>
+    <p class="note-txt">Yapay zeka ile özetleme isteğe bağlıdır. Kapalıyken ücretsiz, internetsiz cihaz-içi özetleyici kullanılır.</p>
+
+    <div class="toggle-row">
+      <input type="checkbox" id="aiToggle">
+      <label for="aiToggle">Yapay zeka ile özetle (Claude)</label>
+    </div>
+
+    <span class="field-label">API anahtarı (sk-ant-...)</span>
+    <input type="password" id="aiKeyInput" placeholder="sk-ant-... (yalnızca bu cihazda saklanır)">
+    <p class="small">
+      Anahtarın bilgisayardaki kodda değil, sadece <b>senin tarayıcının hafızasında</b> tutulur.
+      Anahtarı <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>
+      üzerinden alabilirsin (cüzi bir ücreti vardır). Anahtar girmezsen ücretsiz özetleyici çalışır.
+    </p>
+
+    <div class="form-actions">
+      <button class="btn ghost" id="settingsCloseBtn">Kapat</button>
+      <button class="btn" id="settingsSaveBtn">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
 
   /* ---------- depolama ---------- */
   var memStore = null;
-  function loadNotes() {
-    try { var r = localStorage.getItem("sesli_notlar"); return r ? JSON.parse(r) : []; }
-    catch (e) { return memStore || []; }
+  function loadJSON(key, fallback){
+    try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }
+    catch (e) { return fallback; }
   }
-  function saveNotes(n) {
-    memStore = n;
-    try { localStorage.setItem("sesli_notlar", JSON.stringify(n)); } catch (e) {}
+  function saveJSON(key, val){
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
   }
-  var notes = loadNotes();
+  var notes = loadJSON("sesli_notlar", []);
+  if(!Array.isArray(notes)) notes = [];
+  function saveNotes(n){ memStore=n; saveJSON("sesli_notlar", n); }
+
+  var modules = loadJSON("sesli_moduller", ["Genel"]);
+  if(!Array.isArray(modules) || !modules.length) modules = ["Genel"];
+  function saveModules(){ saveJSON("sesli_moduller", modules); }
+
+  var activeModule = loadJSON("sesli_aktif_modul", "*"); // "*" = tümü
+  function setActiveModule(m){ activeModule=m; saveJSON("sesli_aktif_modul", m); }
+
+  var settings = loadJSON("sesli_ayarlar", { aiOn:false, aiKey:"" });
+  if(typeof settings!=="object"||!settings) settings={ aiOn:false, aiKey:"" };
+  function saveSettings(){ saveJSON("sesli_ayarlar", settings); }
 
   /* ---------- DOM ---------- */
   var $ = function (id) { return document.getElementById(id); };
-  var recBtn=$("recBtn"), timerEl=$("timer"), hint=$("hint"), canvas=$("wave"),
+  var recBtn=$("recBtn"), pauseBtn=$("pauseBtn"), timerEl=$("timer"), hint=$("hint"), canvas=$("wave"),
       ctx=canvas.getContext("2d"), liveBox=$("liveBox"), liveFinal=$("liveFinal"),
       liveInterim=$("liveInterim"), saveForm=$("saveForm"), previewAudio=$("previewAudio"),
-      summaryBox=$("summaryBox"), transcriptInput=$("transcriptInput"), titleInput=$("titleInput"),
-      saveBtn=$("saveBtn"), discardBtn=$("discardBtn"), notesEl=$("notes"),
-      countEl=$("count"), searchEl=$("search"), toastEl=$("toast"), warn=$("warn");
+      summaryBox=$("summaryBox"), aiBtn=$("aiBtn"), transcriptInput=$("transcriptInput"), titleInput=$("titleInput"),
+      moduleSelect=$("moduleSelect"), saveBtn=$("saveBtn"), discardBtn=$("discardBtn"), notesEl=$("notes"),
+      countEl=$("count"), searchEl=$("search"), toastEl=$("toast"), warn=$("warn"), modbar=$("modbar"),
+      settingsBtn=$("settingsBtn"), settingsSheet=$("settingsSheet"), aiToggle=$("aiToggle"),
+      aiKeyInput=$("aiKeyInput"), settingsSaveBtn=$("settingsSaveBtn"), settingsCloseBtn=$("settingsCloseBtn");
 
   var mediaRecorder=null, chunks=[], stream=null;
   var audioCtx=null, analyser=null, rafId=null, dataArr=null;
-  var startTime=0, timerId=null, pendingBlob=null, recording=false;
+  var startTime=0, elapsedBefore=0, timerId=null, pendingBlob=null, recording=false, paused=false;
   var recog=null, finalText="", recogActive=false, wantRecog=false;
+  var gotAnyResult=false, lastRecogError="";
 
   function toast(m){ toastEl.textContent=m; toastEl.classList.add("show");
-    clearTimeout(toastEl._t); toastEl._t=setTimeout(function(){toastEl.classList.remove("show");},2400); }
+    clearTimeout(toastEl._t); toastEl._t=setTimeout(function(){toastEl.classList.remove("show");},2600); }
 
   /* ---------- tarayıcı uyarısı ---------- */
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var insecure = (location.protocol === "file:") || (window.isSecureContext === false);
   if (insecure) {
     warn.classList.add("show");
-    warn.innerHTML = "🔒 Dosyayı doğrudan açtın (file://). Bu modda telefon <b>mikrofonu engeller</b> — izin versen de çalışmaz. Mikrofonun açılması için uygulamayı bir <b>https</b> adresinden ya da kurulu <b>APK</b>'dan aç.";
+    warn.innerHTML = "🔒 Dosyayı doğrudan açtın (file://). Bu modda telefon <b>mikrofonu engeller</b>. Uygulamayı bir <b>https</b> adresinden ya da kurulu <b>APK</b>'dan aç.";
   } else if (!SR) {
     warn.classList.add("show");
-    warn.innerHTML = "⚠️ Bu tarayıcı canlı metne çevirmeyi desteklemiyor. En iyi sonuç için Android'de <b>Chrome</b> kullan. (Kayıt yine de çalışır.)";
+    warn.innerHTML = "⚠️ Bu tarayıcı canlı metne çevirmeyi desteklemiyor. En iyi sonuç için Android'de <b>gerçek Chrome uygulaması</b> kullan. (Kayıt yine de çalışır.)";
   }
 
   /* ---------- canvas ---------- */
@@ -325,13 +449,12 @@
 
   function fmtTime(ms){ var t=Math.floor(ms/100), te=t%10, sec=Math.floor(t/10), m=Math.floor(sec/60), s=sec%60;
     return ("0"+m).slice(-2)+":"+("0"+s).slice(-2)+"<span class='ms'>."+te+"</span>"; }
-  function tick(){ timerEl.innerHTML=fmtTime(Date.now()-startTime); }
+  function tick(){ timerEl.innerHTML=fmtTime(elapsedBefore + (Date.now()-startTime)); }
 
   /* ---------- konuşma tanıma ---------- */
-  var gotAnyResult=false, lastRecogError="";
   function startRecog(){
     if(!SR){
-      hint.textContent="Bu tarayıcı yazıya çevirmeyi desteklemiyor — Chrome kullan. (Kayıt yine de oluyor.)";
+      hint.textContent="Bu tarayıcı yazıya çevirmiyor — gerçek Chrome kullan. (Kayıt yine de oluyor.)";
       return;
     }
     recog = new SR();
@@ -350,7 +473,6 @@
       liveFinal.textContent = finalText;
       liveInterim.textContent = interim ? " "+interim : "";
       liveBox.scrollTop = liveBox.scrollHeight;
-      // canli olarak Metin kutusuna sirayla yaz
       transcriptInput.value = (finalText + (interim ? " "+interim : "")).trim();
       transcriptInput.scrollTop = transcriptInput.scrollHeight;
     };
@@ -368,25 +490,23 @@
           wantRecog=false;
           m="Konuşma tanıma için mikrofon izni gerekli. Adres çubuğundaki kilit → Mikrofon → İzin ver."; break;
         case "network":
-          m="İnternet hatası: yazıya çevirme Google sunucusuna bağlanamadı. Bağlantını kontrol et."; break;
+          m="İnternet hatası: yazıya çevirme sunucuya bağlanamadı. Bağlantını kontrol et."; break;
         case "audio-capture":
-          m="Mikrofona ulaşılamadı (başka uygulama/kayıt mikrofonu tutuyor olabilir)."; break;
-        case "no-speech":
-          m=""; break; // konuşma yoksa sessiz geç, otomatik yeniden başlar
-        case "aborted":
-          m=""; break;
-        default:
-          m="Yazıya çevirme hatası: "+ev.error;
+          m="Mikrofona ulaşılamadı (başka uygulama mikrofonu tutuyor olabilir)."; break;
+        case "no-speech": m=""; break;
+        case "aborted": m=""; break;
+        default: m="Yazıya çevirme hatası: "+ev.error;
       }
       if(m){ toast(m); hint.textContent=m; }
     };
     try{ recog.start(); recogActive=true; }
-    catch(e){ console.error(e); toast("Yazıya çevirme başlatılamadı: "+e.message); }
+    catch(e){ console.error(e); }
   }
   function stopRecog(){ wantRecog=false; if(recog){ try{recog.stop();}catch(e){} } }
 
   /* ---------- kayıt ---------- */
   recBtn.addEventListener("click", function(){ recording?stopRecording():startRecording(); });
+  pauseBtn.addEventListener("click", function(){ if(!recording)return; paused?resumeRecording():pauseRecording(); });
 
   function startRecording(){
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast("Tarayıcı mikrofonu desteklemiyor"); return; }
@@ -404,14 +524,14 @@
       analyser=audioCtx.createAnalyser(); analyser.fftSize=1024;
       dataArr=new Uint8Array(analyser.fftSize); src.connect(analyser); drawWave();
 
-      recording=true;
-      recBtn.classList.add("recording"); timerEl.classList.add("live");
-      hint.textContent="Kaydediliyor & yazıya çevriliyor... durdurmak için tekrar dokun";
-      transcriptInput.value="";
-      summaryBox.textContent="Konuşuluyor...";
-      saveForm.classList.add("show");
-      liveBox.classList.add("show");
-      startTime=Date.now(); timerId=setInterval(tick,100);
+      recording=true; paused=false;
+      recBtn.classList.add("recording"); timerEl.classList.add("live"); timerEl.classList.remove("paused");
+      pauseBtn.hidden=false; pauseBtn.textContent="⏸"; pauseBtn.classList.remove("resume");
+      hint.textContent="Kaydediliyor & yazıya çevriliyor... bitirmek için kırmızıya, durdurmak için ⏸";
+      transcriptInput.value=""; summaryBox.textContent="Konuşuluyor...";
+      fillModuleSelect();
+      saveForm.classList.add("show"); liveBox.classList.add("show");
+      elapsedBefore=0; startTime=Date.now(); timerId=setInterval(tick,100);
 
       wantRecog=true; startRecog();
     }).catch(function(err){
@@ -419,11 +539,9 @@
       var name = err && err.name ? err.name : "";
       var msg;
       if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") {
-        if (insecure) {
-          msg = "Mikrofon engellendi: dosyayı doğrudan açtın. https adresinden ya da kurulu APK'dan aç.";
-        } else {
-          msg = "Mikrofon izni reddedildi. Chrome adres çubuğundaki kilit/⋮ menüsünden Mikrofon → İzin ver yap, sonra sayfayı yenile.";
-        }
+        msg = insecure
+          ? "Mikrofon engellendi: dosyayı doğrudan açtın. https adresinden ya da kurulu APK'dan aç."
+          : "Mikrofon izni reddedildi. Chrome adres çubuğundaki kilit/⋮ menüsünden Mikrofon → İzin ver yap, sonra yenile.";
       } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
         msg = "Mikrofon bulunamadı. Cihazda mikrofon erişimi var mı kontrol et.";
       } else if (name === "NotReadableError") {
@@ -435,13 +553,39 @@
     });
   }
 
+  function pauseRecording(){
+    if(!mediaRecorder || mediaRecorder.state!=="recording") return;
+    try{ mediaRecorder.pause(); }catch(e){}
+    paused=true;
+    elapsedBefore += Date.now()-startTime;
+    clearInterval(timerId);
+    cancelAnimationFrame(rafId); drawIdle();
+    stopRecog();
+    pauseBtn.textContent="▶"; pauseBtn.classList.add("resume");
+    timerEl.classList.remove("live"); timerEl.classList.add("paused");
+    hint.textContent="Duraklatıldı — devam için ▶, bitirmek için kırmızı düğme";
+  }
+
+  function resumeRecording(){
+    if(!mediaRecorder || mediaRecorder.state!=="paused") return;
+    try{ mediaRecorder.resume(); }catch(e){}
+    paused=false;
+    startTime=Date.now(); timerId=setInterval(tick,100);
+    if(analyser) drawWave();
+    wantRecog=true; startRecog();
+    pauseBtn.textContent="⏸"; pauseBtn.classList.remove("resume");
+    timerEl.classList.add("live"); timerEl.classList.remove("paused");
+    hint.textContent="Kaydediliyor & yazıya çevriliyor...";
+  }
+
   function stopRecording(){
     if(mediaRecorder&&mediaRecorder.state!=="inactive") mediaRecorder.stop();
-    recording=false;
-    recBtn.classList.remove("recording"); timerEl.classList.remove("live");
+    recording=false; paused=false;
+    recBtn.classList.remove("recording"); timerEl.classList.remove("live","paused");
+    pauseBtn.hidden=true; pauseBtn.classList.remove("resume");
     clearInterval(timerId); cancelAnimationFrame(rafId); drawIdle();
     if(stream) stream.getTracks().forEach(function(t){t.stop();});
-    if(audioCtx){ audioCtx.close(); audioCtx=null; analyser=null; }
+    if(audioCtx){ try{audioCtx.close();}catch(e){} audioCtx=null; analyser=null; }
     stopRecog();
   }
 
@@ -451,49 +595,45 @@
     previewAudio.src=URL.createObjectURL(pendingBlob);
     liveBox.classList.remove("show");
 
-    // konuşma tanımanın son parçalarını yakalamak için kısa bekleme
     setTimeout(function(){
       var text=(finalText+" "+(liveInterim.textContent||"")).trim();
       transcriptInput.value=text;
       if(text){
-        summaryBox.textContent = summarize(text);
+        summaryBox.textContent = summarizeLocal(text);
       } else if(!SR){
-        summaryBox.textContent = "(Bu tarayıcı yazıya çevirmiyor — Chrome kullan. Metni elle yazabilirsin.)";
+        summaryBox.textContent = "(Bu tarayıcı yazıya çevirmiyor — gerçek Chrome kullan. Metni elle yazabilirsin.)";
       } else if(lastRecogError==="network"){
-        summaryBox.textContent = "(İnternet yok/zayıf olduğu için yazıya çevrilemedi. Metni elle yazabilirsin.)";
+        summaryBox.textContent = "(İnternet yok/zayıf — yazıya çevrilemedi. Metni elle yazabilirsin.)";
       } else if(!gotAnyResult){
         summaryBox.textContent = "(Konuşma algılanmadı. Chrome'da mı? Mikrofon izni var mı? Metni elle yazabilirsin.)";
       } else {
         summaryBox.textContent = "(Metin boş — elle yazabilirsin.)";
       }
       saveForm.classList.add("show");
-      hint.textContent="Metni düzenle, özeti kontrol et ve kaydet";
-      titleInput.value=""; titleInput.focus();
+      hint.textContent="Modülü seç, metni düzenle, kaydet";
+      titleInput.value="";
     }, 350);
   }
 
-  // metni değiştirince özeti yenile
+  // metni değiştirince yerel özeti yenile
   var sumTimer=null;
   transcriptInput.addEventListener("input", function(){
     clearTimeout(sumTimer);
     sumTimer=setTimeout(function(){
       var t=transcriptInput.value.trim();
-      summaryBox.textContent = t ? summarize(t) : "—";
+      summaryBox.textContent = t ? summarizeLocal(t) : "—";
     }, 500);
   });
 
-  /* ---------- özetleme (cihaz içi, internetsiz) ---------- */
+  /* ---------- yerel özetleme (cihaz içi, internetsiz) ---------- */
   var STOP = ("acaba ama ancak artık asla aslında az bana bazen bazı belki ben benden beni benim beri beş bile bin bir biraz biri birkaç birşey biz bizden bize bizi bizim böyle böylece bu buna bunda bundan bunu bunun burada bütün çok çünkü da daha dahi de defa değil diğer diye dolayı dolayısıyla edecek eden ederek edilecek ediliyor edilmesi ediyor eğer en fakat falan gibi göre hâlâ hangi hani hatta hem henüz hep hepsi her herhangi herkes herkesi hiç hiçbir için iki ile ilgili ise işte itibaren itibariyle kadar karşın kendi kendilerine kendini kendisi kendisine kendisini ki kim kime kimi kimse midir mu mü mı nasıl ne neden nedenle nerde nerede nereye niçin niye o olan olarak oldu olduğu olduğunu olduklarını olmadı olmadığı olması olmayan olmaz olsa olsun olup olur olursa oluyor on ona ondan onu onun oysa öyle pek rağmen sadece sanki şayet şekilde şey şu şöyle şunları şundan şunu ta tarafından tüm üzere var vardı ve veya ya yani yapacak yapılan yapılması yapıyor yapmak yaptı yaptığı yaptığını yaptıkları yerine yine yoksa yüzden zaten").split(" ");
   var STOPSET={}; STOP.forEach(function(w){STOPSET[w]=1;});
 
-  function summarize(text){
+  function summarizeLocal(text){
     text=text.replace(/\s+/g," ").trim();
-    // cümlelere böl
     var sents = text.match(/[^.!?]+[.!?]*/g) || [text];
     sents = sents.map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
     if(sents.length<=2) return text;
-
-    // kelime frekansları
     var freq={};
     sents.forEach(function(s){
       s.toLowerCase().replace(/[^a-zçğıöşü0-9\s]/g," ").split(/\s+/).forEach(function(w){
@@ -501,38 +641,122 @@
       });
     });
     var max=1; for(var k in freq){ if(freq[k]>max)max=freq[k]; }
-
-    // cümle puanla
     var scored = sents.map(function(s,idx){
       var words=s.toLowerCase().replace(/[^a-zçğıöşü0-9\s]/g," ").split(/\s+/);
       var sc=0,n=0;
       words.forEach(function(w){ if(w.length<3||STOPSET[w])return; sc+=(freq[w]||0)/max; n++; });
-      // ilk cümlelere küçük bonus
       var posBonus = idx===0 ? 0.25 : (idx===1 ? 0.1 : 0);
       return { idx:idx, sent:s, score:(n? sc/Math.sqrt(n):0)+posBonus };
     });
-
-    // kaç cümle? metin uzunluğuna göre
-    var keep = Math.max(1, Math.min(3, Math.round(sents.length*0.35)));
+    var keep = Math.max(1, Math.min(4, Math.round(sents.length*0.35)));
     var top = scored.slice().sort(function(a,b){return b.score-a.score;}).slice(0,keep);
     top.sort(function(a,b){return a.idx-b.idx;});
-    return top.map(function(t){return t.sent;}).join(" ");
+    return top.map(function(t){return "• "+t.sent;}).join("\n");
+  }
+
+  /* ---------- yapay zeka özetleme (isteğe bağlı, kullanıcının anahtarı) ---------- */
+  function summarizeAI(text){
+    var key=(settings.aiKey||"").trim();
+    if(!settings.aiOn || !key){
+      return Promise.reject(new Error("AI kapalı veya anahtar yok"));
+    }
+    return fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "x-api-key":key,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body: JSON.stringify({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:400,
+        messages:[{role:"user", content:
+          "Aşağıdaki ders/konuşma notunu Türkçe olarak kısa ve madde madde özetle. Sadece özeti yaz, başka bir şey ekleme:\n\n"+text }]
+      })
+    }).then(function(r){
+      if(!r.ok){ return r.text().then(function(t){ throw new Error("API "+r.status+": "+t.slice(0,160)); }); }
+      return r.json();
+    }).then(function(data){
+      var out=(data.content||[]).map(function(b){return b.type==="text"?b.text:"";}).join("").trim();
+      if(!out) throw new Error("Boş yanıt");
+      return out;
+    });
+  }
+
+  aiBtn.addEventListener("click", function(){
+    var text=transcriptInput.value.trim();
+    if(!text){ toast("Önce metin gerekli"); return; }
+    if(!settings.aiOn || !(settings.aiKey||"").trim()){
+      toast("Ayarlar ⚙ → yapay zekayı aç ve anahtar gir"); openSettings(); return;
+    }
+    aiBtn.disabled=true; var old=summaryBox.textContent; summaryBox.textContent="✨ Yapay zeka özetliyor...";
+    summarizeAI(text).then(function(s){
+      summaryBox.textContent=s; toast("AI özeti hazır ✓");
+    }).catch(function(err){
+      console.error(err);
+      summaryBox.textContent=old==="✨ Yapay zeka özetliyor..."?summarizeLocal(text):old;
+      toast("AI özeti başarısız: "+(err.message||"hata").slice(0,40));
+    }).then(function(){ aiBtn.disabled=false; });
+  });
+
+  /* ---------- modüller ---------- */
+  function fillModuleSelect(){
+    moduleSelect.innerHTML="";
+    modules.forEach(function(m){
+      var o=document.createElement("option"); o.value=m; o.textContent=m; moduleSelect.appendChild(o);
+    });
+    var add=document.createElement("option"); add.value="__new__"; add.textContent="＋ Yeni modül…"; moduleSelect.appendChild(add);
+    moduleSelect.value = (activeModule!=="*" && modules.indexOf(activeModule)!==-1) ? activeModule : modules[0];
+  }
+  moduleSelect.addEventListener("change", function(){
+    if(moduleSelect.value==="__new__"){
+      var name=(prompt("Yeni modül / ders adı:")||"").trim();
+      if(name && modules.indexOf(name)===-1){ modules.push(name); saveModules(); renderModbar(); }
+      fillModuleSelect();
+      if(name && modules.indexOf(name)!==-1) moduleSelect.value=name;
+    }
+  });
+
+  function renderModbar(){
+    modbar.innerHTML="";
+    var tabs=[{v:"*",t:"Tümü"}].concat(modules.map(function(m){return {v:m,t:m};}));
+    tabs.forEach(function(tab){
+      var b=document.createElement("button");
+      b.className="mod-tab"+(activeModule===tab.v?" active":"");
+      b.textContent=tab.t;
+      b.addEventListener("click", function(){ setActiveModule(tab.v); renderModbar(); render(); });
+      modbar.appendChild(b);
+    });
+    var addb=document.createElement("button");
+    addb.className="mod-tab add"; addb.textContent="＋ modül";
+    addb.addEventListener("click", function(){
+      var name=(prompt("Yeni modül / ders adı:")||"").trim();
+      if(!name) return;
+      if(modules.indexOf(name)!==-1){ toast("Bu modül zaten var"); return; }
+      modules.push(name); saveModules(); setActiveModule(name); renderModbar(); render();
+    });
+    modbar.appendChild(addb);
   }
 
   /* ---------- kaydet ---------- */
   saveBtn.addEventListener("click", function(){
     if(!pendingBlob){ toast("Önce bir kayıt al"); return; }
+    var mod = moduleSelect.value && moduleSelect.value!=="__new__" ? moduleSelect.value : modules[0];
     var reader=new FileReader();
     reader.onload=function(){
       notes.unshift({
         id:Date.now(),
         title:titleInput.value.trim(),
         transcript:transcriptInput.value.trim(),
-        summary: transcriptInput.value.trim()? summarize(transcriptInput.value.trim()):"",
+        summary: summaryBox.textContent && summaryBox.textContent.charAt(0)!=="(" && summaryBox.textContent!=="—"
+                 ? summaryBox.textContent
+                 : (transcriptInput.value.trim()? summarizeLocal(transcriptInput.value.trim()):""),
         audio:reader.result,
+        module:mod,
         date:new Date().toISOString()
       });
-      saveNotes(notes); render(); resetForm(); toast("Not kaydedildi ✓");
+      saveNotes(notes); render(); resetForm(); toast("Not kaydedildi ✓ ("+mod+")");
     };
     reader.readAsDataURL(pendingBlob);
   });
@@ -549,29 +773,47 @@
   function fmtDate(iso){ var d=new Date(iso),
     m=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
     return d.getDate()+" "+m[d.getMonth()]+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
-  function escapeHtml(s){ return s.replace(/[&<>"']/g,function(c){
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  function noteModule(n){ return n.module || "Genel"; }
 
   function render(){
     var q=(searchEl.value||"").toLowerCase().trim();
-    var filtered=notes.filter(function(n){ if(!q)return true;
-      return ((n.title||"")+" "+(n.transcript||"")+" "+(n.summary||"")).toLowerCase().indexOf(q)!==-1; });
-    countEl.textContent=notes.length?("Notların ("+notes.length+")"):"Notların";
+    var inMod = notes.filter(function(n){ return activeModule==="*" || noteModule(n)===activeModule; });
+    var filtered = inMod.filter(function(n){ if(!q)return true;
+      return ((n.title||"")+" "+(n.transcript||"")+" "+(n.summary||"")+" "+noteModule(n)).toLowerCase().indexOf(q)!==-1; });
+
+    var label = activeModule==="*" ? "Tüm notlar" : activeModule;
+    countEl.textContent = label + (inMod.length?(" ("+inMod.length+")"):"");
+
+    // modül silme bağlantısı
+    var existingDel=document.getElementById("modDelBtn");
+    if(existingDel) existingDel.remove();
+    if(activeModule!=="*"){
+      var delBtn=document.createElement("button");
+      delBtn.id="modDelBtn"; delBtn.className="mod-del"; delBtn.textContent="🗑 modülü sil";
+      delBtn.addEventListener("click", deleteActiveModule);
+      countEl.parentNode.insertBefore(delBtn, searchEl);
+    }
 
     if(!filtered.length){
-      notesEl.innerHTML=notes.length
-        ?'<div class="empty"><div class="big">🔍</div>Aramana uyan not yok.</div>'
-        :'<div class="empty"><div class="big">🎙️</div>Henüz notun yok. Yukarıdan ilk kaydını al!</div>';
+      notesEl.innerHTML = inMod.length
+        ? '<div class="empty"><div class="big">🔍</div>Aramana uyan not yok.</div>'
+        : (notes.length
+            ? '<div class="empty"><div class="big">🗂️</div>Bu modülde henüz not yok.</div>'
+            : '<div class="empty"><div class="big">🎙️</div>Henüz notun yok. Yukarıdan ilk kaydını al!</div>');
       return;
     }
     notesEl.innerHTML="";
     filtered.forEach(function(n){
       var div=document.createElement("div"); div.className="note";
       var title=n.title?escapeHtml(n.title):"Adsız not";
+      var badge='<span class="note-badge">⬡ '+escapeHtml(noteModule(n))+'</span>';
       var sum=n.summary?'<div class="sum">📝 '+escapeHtml(n.summary)+'</div>':'';
       var tr=n.transcript?'<div class="transcript" data-tr="'+n.id+'">'+escapeHtml(n.transcript)+'</div>':'';
       var trBtn=n.transcript?'<button class="link-btn" data-toggle="'+n.id+'">⤢ tam metin</button>':'';
       div.innerHTML=
+        badge+
         '<div class="note-top"><div class="note-title">'+title+'</div>'+
         '<div class="note-date">'+fmtDate(n.date)+'</div></div>'+
         sum+
@@ -588,10 +830,26 @@
     });
   }
 
+  function deleteActiveModule(){
+    if(activeModule==="*") return;
+    var cnt=notes.filter(function(n){return noteModule(n)===activeModule;}).length;
+    var msg = cnt>0
+      ? "'"+activeModule+"' modülünü sil? İçindeki "+cnt+" not 'Genel' modülüne taşınacak."
+      : "'"+activeModule+"' modülünü sil?";
+    if(!confirm(msg)) return;
+    if(modules.indexOf("Genel")===-1){ modules.push("Genel"); }
+    notes.forEach(function(n){ if(noteModule(n)===activeModule) n.module="Genel"; });
+    modules = modules.filter(function(m){ return m!==activeModule; });
+    if(!modules.length) modules=["Genel"];
+    saveModules(); saveNotes(notes); setActiveModule("*");
+    renderModbar(); render(); toast("Modül silindi");
+  }
+
   notesEl.addEventListener("click", function(e){
     var t=e.target;
     var del=t.getAttribute("data-del"), dl=t.getAttribute("data-dl"),
-        txt=t.getAttribute("data-txt"), tog=t.getAttribute("data-toggle");
+        txt=t.getAttribute("data-txt"), tog=t.getAttribute("data-toggle"),
+        word=t.getAttribute("data-word"), pdf=t.getAttribute("data-pdf");
     if(tog){ var el=document.querySelector('.transcript[data-tr="'+tog+'"]');
       if(el){ el.classList.toggle("open"); t.textContent=el.classList.contains("open")?"⤡ gizle":"⤢ tam metin"; } }
     if(del){ if(confirm("Bu notu silmek istediğine emin misin?")){
@@ -599,57 +857,66 @@
     if(dl){ var n1=notes.find(function(n){return String(n.id)===dl;});
       if(n1){ var a=document.createElement("a"); a.href=n1.audio; a.download=(n1.title||"ses-notu")+".webm"; a.click(); } }
     if(txt){ var n2=notes.find(function(n){return String(n.id)===txt;});
-      if(n2){ var content="# "+(n2.title||"Sesli Not")+"\n\nÖZET:\n"+(n2.summary||"-")+"\n\nMETİN:\n"+(n2.transcript||"-");
+      if(n2){ var content="# "+(n2.title||"Sesli Not")+" ["+noteModule(n2)+"]\n\nÖZET:\n"+(n2.summary||"-")+"\n\nMETİN:\n"+(n2.transcript||"-");
         var blob=new Blob([content],{type:"text/plain;charset=utf-8"});
         var a2=document.createElement("a"); a2.href=URL.createObjectURL(blob);
         a2.download=(n2.title||"ses-notu")+".txt"; a2.click(); } }
-    var word=t.getAttribute("data-word"), pdf=t.getAttribute("data-pdf");
-    if(word){ var nw=notes.find(function(n){return String(n.id)===word;});
-      if(nw){ exportWord(nw); } }
-    if(pdf){ var np=notes.find(function(n){return String(n.id)===pdf;});
-      if(np){ exportPdf(np); } }
+    if(word){ var nw=notes.find(function(n){return String(n.id)===word;}); if(nw) exportWord(nw); }
+    if(pdf){ var np=notes.find(function(n){return String(n.id)===pdf;}); if(np) exportPdf(np); }
   });
 
-  /* ---------- Word / PDF disa aktar ---------- */
+  /* ---------- Word / PDF dışa aktar ---------- */
   function docBodyHtml(n){
-    var baslik=escapeHtml(n.title||"Sesli Not");
-    var tarih=fmtDate(n.date);
-    var ozet=escapeHtml(n.summary||"-").replace(/\n/g,"<br>");
-    var metin=escapeHtml(n.transcript||"-").replace(/\n/g,"<br>");
     return ''+
-      '<h1 style="font-family:Arial,sans-serif;color:#c4452d;">'+baslik+'</h1>'+
-      '<p style="font-family:Arial,sans-serif;color:#777;font-size:12px;">'+tarih+'</p>'+
+      '<h1 style="font-family:Arial,sans-serif;color:#c4452d;">'+escapeHtml(n.title||"Sesli Not")+'</h1>'+
+      '<p style="font-family:Arial,sans-serif;color:#777;font-size:12px;">'+escapeHtml(noteModule(n))+' · '+fmtDate(n.date)+'</p>'+
       '<h2 style="font-family:Arial,sans-serif;">Özet</h2>'+
-      '<p style="font-family:Arial,sans-serif;line-height:1.5;">'+ozet+'</p>'+
+      '<p style="font-family:Arial,sans-serif;line-height:1.5;white-space:pre-wrap;">'+escapeHtml(n.summary||"-")+'</p>'+
       '<h2 style="font-family:Arial,sans-serif;">Metin</h2>'+
-      '<p style="font-family:Arial,sans-serif;line-height:1.6;">'+metin+'</p>';
+      '<p style="font-family:Arial,sans-serif;line-height:1.6;white-space:pre-wrap;">'+escapeHtml(n.transcript||"-")+'</p>';
   }
+  function safeName(s){ return String(s||"ses-notu").replace(/[\\/:*?"<>|]/g,"-"); }
 
   function exportWord(n){
-    var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+
-      escapeHtml(n.title||"Sesli Not")+'</title></head><body>'+docBodyHtml(n)+'</body></html>';
+    var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+escapeHtml(n.title||"Sesli Not")+'</title></head><body>'+docBodyHtml(n)+'</body></html>';
     var blob=new Blob(['\ufeff'+html],{type:"application/msword;charset=utf-8"});
-    var a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download=(n.title||"ses-notu").replace(/[\\/:*?"<>|]/g,"-")+".doc";
-    document.body.appendChild(a); a.click(); a.remove();
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=safeName(n.title)+".doc"; document.body.appendChild(a); a.click(); a.remove();
     toast("Word indiriliyor");
   }
-
   function exportPdf(n){
     var w=window.open("","_blank");
     if(!w){ toast("Açılır pencere engellendi — izin ver, tekrar dene"); return; }
-    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">'+
-      '<title>'+escapeHtml(n.title||"Sesli Not")+'</title>'+
-      '<style>@page{margin:2cm;} body{margin:0;}</style></head><body>'+
-      docBodyHtml(n)+
-      '<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>'+
-      '</body></html>');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+escapeHtml(n.title||"Sesli Not")+
+      '</title><style>@page{margin:2cm;}body{margin:0;}</style></head><body>'+docBodyHtml(n)+
+      '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>');
     w.document.close();
     toast('Yazdır ekranında "PDF olarak kaydet" seç');
   }
 
+  /* ---------- ayarlar paneli ---------- */
+  function openSettings(){
+    aiToggle.checked=!!settings.aiOn;
+    aiKeyInput.value=settings.aiKey||"";
+    settingsSheet.classList.add("show");
+  }
+  function closeSettings(){ settingsSheet.classList.remove("show"); }
+  settingsBtn.addEventListener("click", openSettings);
+  settingsCloseBtn.addEventListener("click", closeSettings);
+  settingsSheet.addEventListener("click", function(e){ if(e.target===settingsSheet) closeSettings(); });
+  settingsSaveBtn.addEventListener("click", function(){
+    settings.aiOn=aiToggle.checked;
+    settings.aiKey=aiKeyInput.value.trim();
+    saveSettings();
+    toast(settings.aiOn && settings.aiKey ? "Yapay zeka açık ✓" : "Ayarlar kaydedildi");
+    closeSettings();
+  });
+
   searchEl.addEventListener("input", render);
+
+  /* ---------- başlat ---------- */
+  renderModbar();
+  fillModuleSelect();
   render();
 })();
 </script>
