@@ -350,6 +350,9 @@
       liveFinal.textContent = finalText;
       liveInterim.textContent = interim ? " "+interim : "";
       liveBox.scrollTop = liveBox.scrollHeight;
+      // canli olarak Metin kutusuna sirayla yaz
+      transcriptInput.value = (finalText + (interim ? " "+interim : "")).trim();
+      transcriptInput.scrollTop = transcriptInput.scrollHeight;
     };
     recog.onend = function(){
       recogActive=false;
@@ -404,7 +407,9 @@
       recording=true;
       recBtn.classList.add("recording"); timerEl.classList.add("live");
       hint.textContent="Kaydediliyor & yazıya çevriliyor... durdurmak için tekrar dokun";
-      saveForm.classList.remove("show");
+      transcriptInput.value="";
+      summaryBox.textContent="Konuşuluyor...";
+      saveForm.classList.add("show");
       liveBox.classList.add("show");
       startTime=Date.now(); timerId=setInterval(tick,100);
 
