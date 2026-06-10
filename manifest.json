@@ -1,13 +1,13 @@
 {
-  "name": "Sesli Notlar",
-  "short_name": "Sesli Notlar",
-  "description": "Konus, yaziya cevrilsin, ozeti ciksin.",
+  "name": "Papağan",
+  "short_name": "Papağan",
+  "description": "Konuş, yazıya çevrilsin, özeti çıksın.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#efe6d8",
-  "theme_color": "#c4452d",
+  "background_color": "#dde3f2",
+  "theme_color": "#2f4f9e",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
