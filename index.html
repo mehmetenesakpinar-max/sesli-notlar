@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sesli Notlar</title>
-  <meta name="theme-color" content="#c4452d">
+<title>Papağan</title>
+  <meta name="theme-color" content="#2f4f9e">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sesli Notlar">
-  <meta name="application-name" content="Sesli Notlar">
+  <meta name="apple-mobile-web-app-title" content="Papağan">
+  <meta name="application-name" content="Papağan">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
@@ -22,15 +22,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spline+Sans+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #efe6d8;
-    --paper: #f7f1e6;
-    --ink: #2a1f17;
-    --ink-soft: #6b5a4a;
-    --accent: #c4452d;
-    --accent-deep: #9c3320;
-    --amber: #d98a3d;
-    --line: #d8cbb6;
-    --shadow: rgba(42, 31, 23, 0.14);
+    --bg: #dde3f2;
+    --paper: #f6f8fd;
+    --ink: #1b2540;
+    --ink-soft: #5c688a;
+    --accent: #2f4f9e;
+    --accent-deep: #213a78;
+    --amber: #c79a3e;
+    --rec: #d9433a;
+    --rec-deep: #a8322b;
+    --line: #c3cee6;
+    --shadow: rgba(27, 37, 64, 0.16);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
@@ -38,8 +40,8 @@
     font-family: 'Newsreader', Georgia, serif;
     background: var(--bg);
     background-image:
-      radial-gradient(circle at 15% 20%, rgba(217,138,61,0.10), transparent 40%),
-      radial-gradient(circle at 85% 75%, rgba(196,69,45,0.08), transparent 45%);
+      radial-gradient(circle at 15% 12%, rgba(47,79,158,0.10), transparent 42%),
+      radial-gradient(circle at 85% 80%, rgba(33,58,120,0.10), transparent 46%);
     color: var(--ink);
     min-height: 100%;
     -webkit-font-smoothing: antialiased;
@@ -84,7 +86,7 @@
     font-family: 'Spline Sans Mono', monospace; font-size: 32px; font-weight: 500;
     text-align: center; letter-spacing: 0.02em; color: var(--ink); transition: color .3s;
   }
-  .timer.live { color: var(--accent); }
+  .timer.live { color: var(--rec); }
   .timer.paused { color: var(--amber); }
   .timer .ms { font-size: 16px; opacity: 0.45; }
 
@@ -93,8 +95,8 @@
   .controls { display: flex; align-items: center; justify-content: center; gap: 14px; }
   .rec-btn {
     width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
-    background: var(--accent); position: relative; flex: none;
-    box-shadow: 0 0 0 5px rgba(196,69,45,0.16), 0 10px 22px -8px var(--accent-deep);
+    background: var(--rec); position: relative; flex: none;
+    box-shadow: 0 0 0 5px rgba(217,67,58,0.16), 0 10px 22px -8px var(--rec-deep);
     transition: transform .15s, box-shadow .25s, border-radius .25s;
   }
   .rec-btn:hover { transform: scale(1.05); }
@@ -106,8 +108,8 @@
   .rec-btn.recording { animation: pulse 1.4s infinite; border-radius: 20px; }
   .rec-btn.recording .dot { border-radius: 5px; width: 19px; height: 19px; }
   @keyframes pulse {
-    0%,100% { box-shadow: 0 0 0 6px rgba(196,69,45,0.18), 0 10px 22px -8px var(--accent-deep); }
-    50% { box-shadow: 0 0 0 14px rgba(196,69,45,0.05), 0 10px 22px -8px var(--accent-deep); }
+    0%,100% { box-shadow: 0 0 0 5px rgba(217,67,58,0.18), 0 10px 22px -8px var(--rec-deep); }
+    50% { box-shadow: 0 0 0 13px rgba(217,67,58,0.05), 0 10px 22px -8px var(--rec-deep); }
   }
   .pause-btn {
     width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--ink);
@@ -153,7 +155,7 @@
   .save-form input::placeholder, .save-form textarea::placeholder { color: #b3a48f; font-style: italic; }
   .preview-audio { width: 100%; margin: 4px 0 0; border-radius: 10px; }
   .summary-box {
-    background: linear-gradient(180deg,#fbf3e3,#f7eedd); border: 1.5px solid var(--amber);
+    background: linear-gradient(180deg,#eef2fb,#e6ecf8); border: 1.5px solid var(--accent);
     border-radius: 12px; padding: 14px 16px; font-size: 16px; line-height: 1.55;
     color: var(--ink); white-space: pre-wrap;
   }
@@ -162,7 +164,7 @@
     text-transform: uppercase; background: transparent; border: 1.5px solid var(--amber);
     color: var(--accent-deep); border-radius: 9px; padding: 8px 12px; cursor: pointer; transition: background .2s;
   }
-  .ai-btn:hover { background: #f7eedd; }
+  .ai-btn:hover { background: #e6ecf8; }
   .ai-btn:disabled { opacity: .5; cursor: default; }
   .form-actions { display: flex; gap: 10px; margin-top: 16px; }
   .btn {
@@ -233,11 +235,11 @@
   .note-badge {
     display: inline-block; font-family:'Spline Sans Mono',monospace; font-size: 10px;
     letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-deep);
-    background: #f3e7d4; border: 1px solid var(--line); border-radius: 12px;
+    background: #e6ecf8; border: 1px solid var(--line); border-radius: 12px;
     padding: 3px 9px; margin-bottom: 8px;
   }
   .note .sum {
-    background: #fbf3e3; border-left: 3px solid var(--amber); border-radius: 6px;
+    background: #eef2fb; border-left: 3px solid var(--accent); border-radius: 6px;
     padding: 10px 12px; margin: 12px 0; color: var(--ink); font-size: 15.5px; line-height:1.5; white-space: pre-wrap;
   }
   .note audio { width: 100%; height: 40px; border-radius: 8px; margin-top: 4px; }
@@ -246,7 +248,7 @@
     max-height: 0; overflow: hidden; transition: max-height .35s ease; white-space: pre-wrap;
   }
   .note .transcript.open { max-height: 1200px; }
-  .note-foot { display: flex; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+  .note-foot { display: flex; gap: 14px 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
   .link-btn {
     background: none; border: none; cursor: pointer; padding: 0;
     font-family: 'Spline Sans Mono', monospace; font-size: 11px; letter-spacing: 0.1em;
@@ -270,8 +272,8 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   .warn {
-    background: #fbe9df; border: 1.5px solid var(--accent); border-radius: 12px;
-    padding: 12px 16px; margin-bottom: 24px; font-size: 14.5px; color: var(--accent-deep); display:none;
+    background: #fdeceb; border: 1.5px solid var(--rec); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 24px; font-size: 14.5px; color: var(--rec-deep); display:none;
   }
   .warn.show { display: block; }
 
@@ -341,7 +343,7 @@
   .chat-msgs { display:flex; flex-direction:column; gap:10px; max-height:46vh; overflow-y:auto; margin:12px 0; }
   .bubble { padding:10px 13px; border-radius:14px; font-size:15px; line-height:1.5; max-width:88%; white-space:pre-wrap; }
   .bubble.me { align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
-  .bubble.ai { align-self:flex-start; background:#fbf3e3; border:1.5px solid var(--line); color:var(--ink); border-bottom-left-radius:4px; }
+  .bubble.ai { align-self:flex-start; background:#eef2fb; border:1.5px solid var(--line); color:var(--ink); border-bottom-left-radius:4px; }
   html[data-theme="dark"] .bubble.ai { background:#332a20; }
   .chat-input-row { display:flex; gap:8px; }
   .chat-input-row input {
@@ -388,8 +390,7 @@
 <div class="wrap">
   <header>
     <button class="settings-btn" id="settingsBtn" aria-label="Ayarlar" title="Ayarlar">⚙</button>
-    <div class="kicker">Diktafon · Defter · Özet</div>
-    <h1>Sesli <em>Notlar</em></h1>
+    <h1>🦜 Papağan</h1>
     <p class="tag">Konuş — yazıya dönüşsün, özeti çıksın.</p>
   </header>
 
@@ -1027,7 +1028,7 @@
   function renderModbar(){
     modbar.innerHTML="";
     var root=document.createElement("div");
-    root.className="mind-root"; root.textContent="📚 Derslerim";
+    root.className="mind-root"; root.textContent="❖ Derslerim";
     modbar.appendChild(root);
 
     var branch=document.createElement("div");
